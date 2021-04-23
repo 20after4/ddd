@@ -1,6 +1,7 @@
 import pprint
 from enum import Enum
-from collections import deque
+from collections import UserDict, UserList, deque
+from collections.abc import MutableMapping, Iterable
 import sqlite3
 
 con = sqlite3.connect(':memory:')
@@ -20,29 +21,29 @@ class DataIterator(object):
     def __next__(self):
         return Data(next(self.data))
 
-class Data(object):
+class Data(MutableMapping):
     data = None
 
-    def __init__(self, data):
+    def __init__(self, data, parent=None):
         # print(type(data))
         self.data = data
+        if parent:
+            self.parent = parent
 
     def __getattr__(self, attr):
-        #print(f"get:{attr}:{self.data[attr]}")
-
         return self.__getitem__(attr)
 
     def __getitem__(self, item):
         itemdata = self.data[item]
-        if isinstance(itemdata, list):
-            return DataList(itemdata)
-        elif isinstance(itemdata, dict):
-            return Data(itemdata)
+        if isinstance(itemdata, (dict, UserDict)):
+            return Data(itemdata, self)
+        elif isinstance(itemdata, (list, UserList, Iterable)):
+            return DataList(itemdata, self)
         else:
             return itemdata
 
     def __dir__(self):
-        return self.data.keys()
+        return self.data.keys() + self.__dict__.keys()
 
     def __iter__(self):
         return DataIterator(self.data)
@@ -56,6 +57,7 @@ class Data(object):
     def __repr__(self):
         return pprint.pformat(self.data, indent=2)
 
+
 class DataList(Data):
     def __getattr__(self, attr):
         raise AttributeError()
@@ -63,9 +65,11 @@ class DataList(Data):
     def __dir__(self):
         return dir(self.__dict__)
 
+
 class Token(Enum):
     ATTR = 1
     ITEM = 2
+    PARENT = 3
 
 
 class QueryBuilder(object):
@@ -75,11 +79,15 @@ class QueryBuilder(object):
         self.query = deque()
 
     def __getitem__(self, key):
-        self.query.append(Token.ITEM)
-        self.query.append(key)
+        self.query.append((Token.ITEM, key))
+
         return self
 
     def __getattr__(self, key):
-        self.query.append(Token.ATTR)
-        self.query.append(key)
+        self.query.append((Token.ATTR, key))
         return self
+
+    def parent(self):
+        self.query.append((Token.PARENT))
+
+

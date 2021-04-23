@@ -1,13 +1,16 @@
 
 from builtins import str
-from collections import deque
+from collections import UserDict, UserString, deque
+from collections.abc import Iterable
+
 import json
 import os
+
 # todo: remove dependency on requests
 import requests
 
-
 from ddd.data import DataIterator, Data
+from ddd.phobjects import *
 
 class Conduit(object):
     phab_url = 'https://phabricator.wikimedia.org/api/'
@@ -47,6 +50,29 @@ class Conduit(object):
             return r
         return ConduitResult(conduit=self, res=r, method=method, args=args)
 
+    def edit(self, method: str,  objectidentifier: str, transactions: list):
+        """
+        Calls a conduit "edit" method which applies a list of transactions
+        to a specified object (specified by a phabricator identifier such as
+        T123, #project or a PHID of the appropriate type)
+
+        Raises an exception if something goes wrong and returns the decoded
+        conduit response otherwise.
+        """
+        data = {
+            "parameters": {
+                "transactions": transactions,
+                "objectidentifier": objectidentifier
+            }
+        }
+        data = flatten_for_post(args)
+        data['api.token'] = self.conduit_token
+        r = requests.post(f"{self.phab_url}{method}", data=data)
+        json = r.json()
+        if json['error_info'] is not None:
+            raise ConduitException(self.conduit, self, json['error_info'])
+        return json
+
 
 class ConduitResult(object):
     """
@@ -58,13 +84,14 @@ class ConduitResult(object):
     method = None
     args = None
     data = None
-    cursor = {}
+    cursor = None
 
     def __init__(self, conduit: Conduit, res: requests.Response,
                  method: str, args: dict):
         self.conduit = conduit
         self.method = method
         self.args = args
+        self.cursor = {}
         self.handle_result(res)
 
     def retry(self):
@@ -103,6 +130,8 @@ class ConduitResult(object):
 
         if "cursor" in self.result:
             self.cursor = self.result['cursor']
+        else:
+            self.cursor = {}
 
         if "data" in self.result:
             # Modern conduit methods return a result[data] and result{cursor}
@@ -114,8 +143,36 @@ class ConduitResult(object):
             self.data = self.result
 
     def has_more(self):
-        after = self.cursor.get('after', None)
-        return after is not None
+        return self.cursor.get('after', None)
+
+    def resolve_phids(self, data=False):
+        if data is False:
+            data = self.data
+
+        if isinstance(data, dict):
+            iter = data.items()
+        elif isinstance(data, (Iterable, list)) :
+            iter = enumerate(data)
+        else:
+            return
+
+        for key, val in iter:
+            if isPHID(val):
+                data[key] = PHObject.instance(val)
+            elif isinstance(val, (list, dict)):
+                self.resolve_phids(data=val)
+
+        if data is self.data:
+            phids = [phid for phid in PHObject.instances.keys()]
+            args = {'phids': phids}
+            res = self.conduit.request(method='phid.query', args=args, raw=True)
+            objs = res.json()
+            for key, vals in objs['result'].items():
+                PHObject.instances[key].update(vals)
+
+                # for attr in vals.keys():
+                #     setattr(PHObject.instances[key], attr, vals[attr])
+            return res
 
     def __iter__(self):
         return DataIterator(self.data)
@@ -130,21 +187,12 @@ class ConduitResult(object):
         return item in self.data
 
 
+
 class ConduitException(Exception):
     def __init__(self, conduit: Conduit, result: ConduitResult, message: str):
         self.conduit = conduit
         self.result = result
         self.message = message
-
-
-def PHIDType(phid):
-    _, phidtype, phidhash = phid.split('-', 3)
-    return phidtype
-
-
-def isPHID(value):
-    return isinstance(value, str) and str.startswith("PHID-")
-
 
 def flatten_for_post(h, result=None, kk=None):
     """
