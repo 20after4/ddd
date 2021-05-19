@@ -116,7 +116,7 @@ def gettransactions(taskids):
                 # Ignore all transactions which do not have a matching formatter
                 # you can uncomment the print statement below to see what other
                 # transaction types are available:
-                print(trnstype)
+                # print(trnstype)
                 continue
             # format the transaction data using the matching formatter function
             formatted = formatters[trnstype](tr)
