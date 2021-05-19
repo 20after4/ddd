@@ -1,93 +1,129 @@
+from __future__ import annotations
+from collections import UserDict
+from collections import UserList
+from collections.abc import Collection
+from collections.abc import Iterable
+from collections.abc import MutableMapping
+from collections.abc import MutableSequence
+from collections.abc import Iterator
+
+import json
 import pprint
-from enum import Enum
-from collections import UserDict, UserList, deque
-from collections.abc import MutableMapping, Iterable
 import sqlite3
+from sqlite3.dbapi2 import Connection
+from typing import Optional, Union
 
-con = sqlite3.connect(':memory:')
+
+class DataCache(object):
+    con: sqlite3.Connection
+
+    def __init__(self, db):
+        self.con = sqlite3.connect(db)
+        self.con.execute(
+            "create table phobjects (phid TEXT PRIMARY KEY, name TEXT, data TEXT)"
+        )
+
+    def row(self, item):
+        data = json.dumps(item)
+        return (item.phid, item.name, data)
+
+    def store_all(self, items):
+        for item in items:
+            self.row(item)
+
+    def store_one(self, item, data):
+
+        values = (item.phid, item.name, data)
+        self.con.execute("replace into phobjects values (?, ?, ?)", values)
 
 
-class DataIterator(object):
-    """ DataIterator iterates over a list of raw data, returning each record
+class DataIterator(Iterator):
+    """DataIterator iterates over a list of raw data, returning each record
     wrapped in a Data instance.
     """
-    data = None
-    def __init__(self, data):
+
+    data: Iterator
+
+    def __init__(self, data, parent=None):
         self.data = data.__iter__()
+        self.parent = parent
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        return Data(next(self.data))
+        item = next(self.data)
+        return wrapitem(item, self.parent)
+
 
 class Data(MutableMapping):
-    data = None
+    Data_Class = locals().__class__
 
-    def __init__(self, data, parent=None):
-        # print(type(data))
+    data: Union[dict, list, MutableMapping, MutableSequence]
+    _parent: Optional[Data_Class]
+
+    def __new__(cls, data, *args, **kwargs):
+        if isinstance(data, MutableMapping):
+            subcls = DataDict
+        elif isinstance(data, MutableSequence):
+            subcls = DataList
+        else:
+            raise TypeError(
+                "data argument must be a list or a mapping, not %s" % type(data)
+            )
+        if super().__new__ is object.__new__ and cls.__init__ is not object.__init__:
+            obj = super().__new__(subcls)
+        else:
+            obj = super().__new__(subcls, *args, **kwargs)
+        return obj
+
+    def __init__(self, data, parent: Data_Class = None):
         self.data = data
         if parent:
-            self.parent = parent
+            self._parent = parent
+        else:
+            self._parent = None
+
+    def parent(self):
+        return self._parent
+
+    def siblings(self):
+        """Iterate over the children of this element's parent data structure"""
+        return iter(self._parent)
 
     def __getattr__(self, attr):
         return self.__getitem__(attr)
 
     def __getitem__(self, item):
-        itemdata = self.data[item]
-        if isinstance(itemdata, (dict, UserDict)):
-            return Data(itemdata, self)
-        elif isinstance(itemdata, (list, UserList, Iterable)):
-            return DataList(itemdata, self)
-        else:
-            return itemdata
-
-    def __dir__(self):
-        return self.data.keys() + self.__dict__.keys()
+        item = self.data[item]
+        return wrapitem(item, self)
 
     def __iter__(self):
-        return DataIterator(self.data)
-
-    def __len__(self):
-        return len(self.data)
-
-    def __contains__(self, item):
-        return item in self.data
-
-    def __repr__(self):
-        return pprint.pformat(self.data, indent=2)
-
-
-class DataList(Data):
-    def __getattr__(self, attr):
-        raise AttributeError()
+        return DataIterator(self.data, self)
 
     def __dir__(self):
-        return dir(self.__dict__)
+        return dir(self.data)
 
 
-class Token(Enum):
-    ATTR = 1
-    ITEM = 2
-    PARENT = 3
+class DataDict(Data, UserDict):
+    data: MutableMapping
 
 
-class QueryBuilder(object):
+class DataList(Data, UserList):
+    data: MutableSequence
 
-    def __init__(self, data):
-        self.data = data
-        self.query = deque()
+    def __delitem__(self, v):
+        del self.data[v]
 
-    def __getitem__(self, key):
-        self.query.append((Token.ITEM, key))
-
-        return self
-
-    def __getattr__(self, key):
-        self.query.append((Token.ATTR, key))
-        return self
-
-    def parent(self):
-        self.query.append((Token.PARENT))
+    def __setitem__(self, item, val):
+        self.data[item] = val
 
 
+def wrapitem(item, parent=None):
+    if isinstance(item, (Data, str)):
+        return item
+    if isinstance(item, (dict, UserDict)):
+        return Data(item, parent)
+    if isinstance(item, (list, UserList, Iterable)):
+        return DataList(item, parent)
+    return item
