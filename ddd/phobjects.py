@@ -1,8 +1,8 @@
 from __future__ import annotations
+
 from enum import Enum
 from functools import total_ordering
-from pydoc import classname
-from symbol import classdef
+from pprint import pprint
 import time
 from typing import ClassVar, Dict, Generic, Mapping, NewType, Type, TypeVar, Union
 from datetime import datetime
@@ -25,25 +25,14 @@ from datetime import datetime
  """
 
 PHID = NewType("PHID", str)
-
-
-class PHIDTypes(Enum):
-    PHOB = "PHObject"
-    PROJ = "Project"
-    TASK = "Task"
-    CMIT = "Commit"
-    XACT = "Transaction"
-    STRY = "FeedStory"
-    APPS = "Application"
-    PCOL = "ProjectColumn"
-    USER = "User"
+Status = NewType('Status', str)
 
 
 def isPHID(value: str):
     return isinstance(value, str) and value.startswith("PHID-")
 
 
-def PHIDType(phid: PHID):
+def PHIDType(phid: PHID) -> Union[Type[PhabObjectBase], str]:
     parts = phid.split("-")
     phidtype = parts[1]
     if phidtype in PHIDTypes.__members__:
@@ -72,6 +61,17 @@ class SubclassCache(Generic[TID, T]):
     @classmethod
     def byid(cls, id: TID) -> Union[T, None]:
         obj = cls.instances.get(id)
+        return obj
+
+    @classmethod
+    def resolve_phids(cls, conduit):
+        phids = [phid for phid in cls.instances.keys()]
+
+        res = conduit.raw_request(method="phid.query", args={"phids": phids})
+
+        objs = res.json()
+        for key, vals in objs["result"].items():
+            cls.instances[key].update(vals)
 
 
 class PhabObjectBase(object):
@@ -82,9 +82,14 @@ class PhabObjectBase(object):
     fullName: str
     dateCreated: datetime
     dateModified: datetime
+    status: Status
 
     def __init__(self, phid: PHID):
-        self.phid = phid
+        self.phid = PHID(phid)
+        self.name = "(Unknown object)"
+        self.status = Status("unknown")
+        self.fullName = ""
+
 
     def update(self, data: Mapping):
         self.__dict__.update(data)
@@ -118,7 +123,7 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
         self.__dict__.update(kwargs)
 
     def __str__(self):
-        return "%s (%s)" % (self.phid, self.fullName)
+        return self.name if len(self.name) else self.phid
 
     def __repr__(self):
         # {self.__dict__}
@@ -139,14 +144,15 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
         return len(self.__dict__.keys()) > 1
 
     @classmethod
-    def instance(cls, phid: PHID) -> Union[PhabObjectBase, None]:
-        if phid in __class__.instances:
-            obj = __class__.byid(phid)
+    def instance(cls, phid: PHID) -> PhabObjectBase:
+        obj = __class__.byid(phid)
+        if obj:
             return obj
 
         phidtype = PHIDType(phid)
-        typecls = __class__.subclass(phidtype, cls)
-        newinstance = typecls(phid)
+        if isinstance(phidtype, str):
+            phidtype = __class__.subclass(phidtype, cls)
+        newinstance = phidtype(phid)
         __class__.instances[phid] = newinstance
         return newinstance
 
@@ -167,6 +173,19 @@ class Task(PHObject):
     pass
 
 
+
+class Commit(PHObject):
+    pass
+
+
+class FeedStory(PHObject):
+    pass
+
+
+class Application(PHObject):
+    pass
+
+
 class Transaction(PHObject):
 
     relationships = {
@@ -176,4 +195,21 @@ class Transaction(PHObject):
         "close-as-duplicate": 63,
     }
 
+
+class Event(PHObject):
+    """ Phabricator Calendar Event """
     pass
+
+
+class PHIDTypes(Enum):
+    PHOB = PHObject
+    PROJ = Project
+    TASK = Task
+    CMIT = Commit
+    CEVT = Event
+    XACT = Transaction
+    STRY = FeedStory
+    APPS = Application
+    PCOL = ProjectColumn
+    USER = User
+

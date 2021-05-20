@@ -1,18 +1,23 @@
 #!/usr/bin/python3
-
-from collections import UserDict
-from typing import Mapping
-from ddd.phobjects import PHIDType, Task
-from operator import itemgetter
-import requests
-import sys
 import json
+import sys
+from collections import UserDict
+from operator import itemgetter
 from pprint import pprint
+from typing import Mapping
+
+import pandas as pd
+import requests
+from IPython.display import display
+
 import ddd
-from ddd.phab import Conduit, ConduitException
 from ddd.mw import version
+from ddd.phab import Conduit, ConduitException
+from ddd.phobjects import PHIDType, Task, PHObject
 
 phab = Conduit()
+pd.options.display.max_columns = None
+pd.options.display.max_rows = None
 
 # find all train blocker tasks
 
@@ -20,6 +25,9 @@ r = phab.request(
     "maniphest.search",
     {
         "queryKey": "ZKaMIUs_NEXo",
+        "constraints": {
+            'ids': ['249964'],
+        },
         "limit": "50",
         "attachments": {"projects": False, "columns": False},
     },
@@ -68,11 +76,14 @@ def gettransactions(taskids):
             ov = [key for key in ov.keys()]
 
         # ... we only care about tasks:
-        if len(ov) == 0 and len(nv) == 1 and PHIDType(nv[0]) is Task:
-            return ("added", nv[0])
-        elif len(ov) == 1 and len(nv) == 0 and PHIDType(ov[0]) is Task:
-            return ("removed", nv[0])
+        if len(ov) == 0 and len(nv) > 0 and PHIDType(nv[0]) is Task:
+            return ("added", [obj for obj in map(PHObject.instance, nv)])
+        elif len(ov) > 0 and len(nv) == 0 and PHIDType(ov[0]) is Task:
+            return ("removed", [obj for obj in map(PHObject.instance, ov)])
         else:
+            print("--- new %s --- old %s ---" % (len(nv), len(ov)))
+            pprint(nv)
+            pprint(ov)
             # ignore other edge types
             return None
 
@@ -83,10 +94,10 @@ def gettransactions(taskids):
         ov = t["oldValue"]
         for item in nv.items():
             phid, action = item
-            return (action, phid)
+            return (action, PHObject.instance(phid))
 
     # a comment was added
-    @ttype("core:comment")
+    #@ttype("core:comment")
     def comment(t):
         # todo: we could check for the risky revision template here, if we care
         # to count that.
@@ -99,6 +110,15 @@ def gettransactions(taskids):
         nv = version(str(t['newValue']))
         if nv:
             return ('version', nv)
+
+    #@ttype("core:columns")
+    def columns(t):
+        pprint(t)
+
+    #@ttype("status")
+    def status(t):
+        pprint(t)
+
 
     transactions = phab.request(
         "maniphest.gettasktransactions",
@@ -116,7 +136,7 @@ def gettransactions(taskids):
                 # Ignore all transactions which do not have a matching formatter
                 # you can uncomment the print statement below to see what other
                 # transaction types are available:
-                # print(trnstype)
+                print(trnstype)
                 continue
             # format the transaction data using the matching formatter function
             formatted = formatters[trnstype](tr)
@@ -127,12 +147,10 @@ def gettransactions(taskids):
 
 # now collect all of the formatted transaction details
 rows = [row for row in gettransactions(tasks)]
-
-
-# now we could write a csv file or output the data to stdout
-# for now, just output tsv:
-for row in rows:
-    print("\t".join(row))
+PHObject.resolve_phids(phab)
+columns = ['task', 'timestamp', 'author','action','values']
+data = pd.DataFrame(rows, columns=columns)
+display(data)
 
 if __name__ == "__main__":
     pass

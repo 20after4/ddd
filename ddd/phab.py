@@ -1,18 +1,17 @@
 from __future__ import annotations
 
+import json
+import os
 from builtins import str
 from collections import UserDict, UserList, deque
 from collections.abc import Iterable
-
-import json
-import os
 from pprint import pprint
 from tokenize import Number
 from typing import Collection, MutableMapping, MutableSequence, Union
-from numpy import real
 
 # todo: remove dependency on requests
 import requests
+from numpy import real
 
 from ddd.data import Data, DataIterator, wrapitem
 from ddd.phobjects import PHObject, isPHID
@@ -185,17 +184,7 @@ class ConduitCursor(object):
                 self.resolve_phids(data=val)
 
         if data is self.data and len(PHObject.instances):
-            phids = [phid for phid in PHObject.instances.keys()]
-            pprint(phids)
-            res = self.conduit.raw_request(method="phid.query", args={"phids": phids})
-            pprint(res.text)
-            objs = res.json()
-            for key, vals in objs["result"].items():
-                PHObject.instances[key].update(vals)
-
-                # for attr in vals.keys():
-                #     setattr(PHObject.instances[key], attr, vals[attr])
-            return res
+            PHObject.resolve_phids(self.conduit)
 
     def __iter__(self):
         return DataIterator(self.data)
@@ -220,6 +209,11 @@ class ConduitException(Exception):
         self.result = result
         self.message = message
 
+    def __repr__(self):
+        return "ConduitException(message='%s')" % self.message
+
+    def __str__(self):
+        return "ConduitException: " + self.message
 
 def flatten_for_post(h, result=None, kk=None):
     """
