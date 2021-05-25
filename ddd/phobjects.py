@@ -1,11 +1,18 @@
 from __future__ import annotations
+from collections import UserDict
+from itertools import repeat
 
+import json
+import sqlite3
+import time
+from collections.abc import Sequence, Mapping, MutableMapping, Iterator
+from datetime import datetime
 from enum import Enum
 from functools import total_ordering
 from pprint import pprint
-import time
-from typing import ClassVar, Dict, Generic, Mapping, NewType, Type, TypeVar, Union
-from datetime import datetime
+from sqlite3 import Connection
+from typing import (Any, ClassVar, Generic, NewType, Optional, Type, TypeVar,
+                    Union)
 
 """
  Phabricator Objects
@@ -25,7 +32,16 @@ from datetime import datetime
  """
 
 PHID = NewType("PHID", str)
-Status = NewType('Status', str)
+
+class Status(Enum):
+    Open = "open"
+    Closed = "closed"
+    Resolved = "closed"
+    Duplicate = "closed"
+    Declined = "closed"
+    Unknown = "unknown"
+
+
 
 
 def isPHID(value: str):
@@ -63,36 +79,47 @@ class SubclassCache(Generic[TID, T]):
         obj = cls.instances.get(id)
         return obj
 
-    @classmethod
-    def resolve_phids(cls, conduit):
-        phids = [phid for phid in cls.instances.keys()]
 
-        res = conduit.raw_request(method="phid.query", args={"phids": phids})
-
-        objs = res.json()
-        for key, vals in objs["result"].items():
-            cls.instances[key].update(vals)
-
-
-class PhabObjectBase(object):
+class PhabObjectBase(UserDict, dict):
     phid: PHID
     id: int = 0
-
+    data: dict = {}
     name: str
     fullName: str
     dateCreated: datetime
     dateModified: datetime
     status: Status
 
-    def __init__(self, phid: PHID):
+    def __init__(self, phid: PHID, **kwargs):
+        super().__init__(**kwargs)
         self.phid = PHID(phid)
         self.name = "(Unknown object)"
         self.status = Status("unknown")
         self.fullName = ""
 
+    def __getattr__(self, attr:str) -> Any:
+        if attr in self.data:
+            return self.data[attr]
+        raise AttributeError(f'{__name__!r} has no attribute {attr!r}')
 
-    def update(self, data: Mapping):
-        self.__dict__.update(data)
+    def __setattr__(self, name: str, value: Any) -> None:
+        self.data[name] = value
+        object.__setattr__(self, name, value)
+
+    def __setitem__(self, name, value):
+        self.data[name] = value
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, attr):
+        if attr in self.data:
+            del(self.data[attr])
+        object.__delattr__(self, attr)
+
+    def __str__(self) -> str:
+        return self.name if len(self.name) else self.phid
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(name="{self.name}", phid="{self.phid}")'
 
 
 PHO = TypeVar("PHO", bound=PhabObjectBase)
@@ -119,15 +146,10 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             del kwargs["dateModified"]
         else:
             self.dateModified = self.dateCreated
+        if len(kwargs):
+            self.update(kwargs)
 
-        self.__dict__.update(kwargs)
 
-    def __str__(self):
-        return self.name if len(self.name) else self.phid
-
-    def __repr__(self):
-        # {self.__dict__}
-        return f'<{self.__module__}.{self.__class__.__name__}(phid="{self.phid}", name="{self.name}")>'
 
     def __eq__(self, other: PhabObjectBase):
         if isinstance(other, PhabObjectBase):
@@ -144,17 +166,34 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
         return len(self.__dict__.keys()) > 1
 
     @classmethod
-    def instance(cls, phid: PHID) -> PhabObjectBase:
+    def instance(cls, phid: PHID, data:Optional[Mapping] = None) -> PhabObjectBase:
         obj = __class__.byid(phid)
-        if obj:
-            return obj
+        if not obj:
+            phidtype = PHIDType(phid)
+            if isinstance(phidtype, str):
+                phidtype = __class__.subclass(phidtype, cls)
+            obj = phidtype(phid)
+            __class__.instances[phid] = obj
+        if data:
+            obj.update(data)
+        return obj
 
-        phidtype = PHIDType(phid)
-        if isinstance(phidtype, str):
-            phidtype = __class__.subclass(phidtype, cls)
-        newinstance = phidtype(phid)
-        __class__.instances[phid] = newinstance
-        return newinstance
+    @classmethod
+    def resolve_phids(cls, conduit, cache:Optional[DataCache]=None):
+        phids = [phid for phid in cls.instances.keys()]
+
+        if cache:
+            objs = cache.load(phids)
+            for data in objs:
+                phid = data['phid']
+                phids -= phid
+                cls.instance(phid).update(data)
+
+        res = conduit.raw_request(method="phid.query", args={"phids": phids})
+
+        objs = res.json()
+        for key, vals in objs["result"].items():
+            cls.instances[key].update(vals)
 
 
 class User(PHObject):
@@ -170,8 +209,11 @@ class ProjectColumn(PHObject):
 
 
 class Task(PHObject):
-    pass
-
+    def update(self, data:MutableMapping):
+        if 'fields' in data.keys():
+            super().update(data['fields'])
+            del(data['fields'])
+        super().update(data)
 
 
 class Commit(PHObject):
@@ -188,18 +230,33 @@ class Application(PHObject):
 
 class Transaction(PHObject):
 
-    relationships = {
+    rel_by_name = {
         "has-subtask": 3,
         "has-parent": 4,
         "merge-in": 62,
         "close-as-duplicate": 63,
+        "has-project": 41
     }
+    rel_by_id = { val:key for key, val in rel_by_name.items() }
 
 
 class Event(PHObject):
     """ Phabricator Calendar Event """
     pass
 
+
+class EdgeType(Enum):
+    TASK_COMMIT = 1
+    COMMIT_TASK = 2
+    SUB_TASK = 3
+    PARENT_TASK = 4
+    PROJECT_MEMBER = 13
+    SUBSCRIBER = 21
+    OBJECT_FILE = 25
+    FILE_OBJECT = 26
+    PROJECT_TAG = 41
+    MENTION = 51
+    DUPLICATE_TASK = 63
 
 class PHIDTypes(Enum):
     PHOB = PHObject
@@ -213,3 +270,85 @@ class PHIDTypes(Enum):
     PCOL = ProjectColumn
     USER = User
 
+
+class PHIDRef(object):
+    __slots__ = ('fromPHID', 'toPHID', 'object', 'relation')
+
+    fromPHID:Optional[PHID]
+    toPHID:PHID
+    object:PhabObjectBase
+    relation:Optional[PhabObjectBase]
+
+    def __init__(self, toPHID:PHID, fromPHID:Optional[PHID] = None):
+        self.toPHID = toPHID
+        self.fromPHID = fromPHID
+        self.object = PHObject.instance(self.toPHID)
+        if fromPHID:
+            self.relation = PHObject.instance(fromPHID)
+        else:
+            self.relation = None
+
+    def __repr__(self) -> str:
+        return "PHIDRef('%s')" % self.toPHID
+
+    def __str__(self) -> str:
+        return self.toPHID
+
+
+def json_object_hook(obj:dict):
+    """ Instantiate PHID objects during json parsing """
+
+    phid = obj.get('phid', None)
+
+    for k, v in obj.items():
+        if not k == 'phid' and not isinstance(v, PHIDRef) and isPHID(v):
+            obj[k] = PHIDRef(v, phid)
+    if phid and isPHID(phid):
+        return PHObject.instance(phid=phid, data=obj)
+    else:
+        return obj
+
+
+class DataCache(object):
+    con:sqlite3.Connection
+
+    replace_phobject = """
+    REPLACE INTO phobjects (phid,   name, dateCreated, dateModified, data)
+    VALUES                 (   ?,      ?,           ?,            ?,    ?)
+    """
+
+    def __init__(self, db):
+        self.con = sqlite3.connect(db)
+        self.con.row_factory = sqlite3.Row()
+        self.con.execute(
+            """CREATE TABLE if not exists phobjects (
+                id real,
+                phid TEXT PRIMARY KEY,
+                authorPHID text,
+                name TEXT,
+                fullname TEXT,
+                dateCreated real,
+                dateModified real,
+                status TEXT,
+                data TEXT
+            ); """)
+
+    def load(self, phids):
+        placeholders = ",".join(repeat("?", len(phids)))
+        select = f"SELECT * FROM phobjects where phid in ({placeholders})"
+        if isinstance(phids, list):
+            return self.con.executemany(select, phids)
+        else:
+            return self.con.execute(select, phids)
+
+    def row(self, item):
+        data = json.dumps(item)
+        return (item.phid, item.name, item.dateCreated, item.dateModified, data)
+
+    def store_all(self, items:Sequence[PHObject]):
+        rows = [self.row(item) for item in items]
+        self.con.executemany(self.replace_phobject, rows)
+
+    def store_one(self, item:PHObject):
+        values = self.row(item)
+        self.con.execute(self.replace_phobject, values)

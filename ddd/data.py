@@ -9,32 +9,10 @@ from collections.abc import Iterator
 
 import json
 import pprint
-import sqlite3
-from sqlite3.dbapi2 import Connection
 from typing import Optional, Union
 
 
-class DataCache(object):
-    con: sqlite3.Connection
 
-    def __init__(self, db):
-        self.con = sqlite3.connect(db)
-        self.con.execute(
-            "create table phobjects (phid TEXT PRIMARY KEY, name TEXT, data TEXT)"
-        )
-
-    def row(self, item):
-        data = json.dumps(item)
-        return (item.phid, item.name, data)
-
-    def store_all(self, items):
-        for item in items:
-            self.row(item)
-
-    def store_one(self, item, data):
-
-        values = (item.phid, item.name, data)
-        self.con.execute("replace into phobjects values (?, ?, ?)", values)
 
 
 class DataIterator(Iterator):
@@ -44,7 +22,7 @@ class DataIterator(Iterator):
 
     data: Iterator
 
-    def __init__(self, data, parent=None):
+    def __init__(self, data:Iterable, parent=None):
         self.data = data.__iter__()
         self.parent = parent
 

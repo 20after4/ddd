@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import json
 import os
-from builtins import str
 from collections import UserDict, UserList, deque
-from collections.abc import Iterable
+from collections.abc import (
+    Iterable,
+    Collection,
+    Mapping,
+    MutableMapping,
+    MutableSequence)
 from pprint import pprint
 from tokenize import Number
-from typing import Collection, MutableMapping, MutableSequence, Union
+from typing import Union
 
 # todo: remove dependency on requests
 import requests
 from numpy import real
 
 from ddd.data import Data, DataIterator, wrapitem
-from ddd.phobjects import PHObject, isPHID
+from ddd.phobjects import PHID, PHObject, PhabObjectBase, isPHID, json_object_hook
 
 
 class Conduit(object):
@@ -48,7 +52,7 @@ class Conduit(object):
 
         return os.environ.get("CONDUIT_TOKEN", token)
 
-    def raw_request(self, method: str, args: MutableMapping):
+    def raw_request(self, method: str, args: Mapping) -> requests.Response:
         """
         Helper method to call a phabricator api and return a ConduitCursor
         which can be used to iterate over all of the resulting records.
@@ -58,7 +62,7 @@ class Conduit(object):
         r = requests.post(f"{self.phab_url}{method}", data=req)
         return r
 
-    def request(self, method: str, args: MutableMapping):
+    def request(self, method: str, args: MutableMapping) -> ConduitCursor:
         r = self.raw_request(method=method, args=args)
         return ConduitCursor(conduit=self, res=r, method=method, args=args)
 
@@ -80,7 +84,7 @@ class Conduit(object):
         req = flatten_for_post(req)
         req["api.token"] = self.token
         r = requests.post(f"{self.phab_url}{method}", data=req)
-        json = r.json()
+        json = r.json(object_hook=json_object_hook)
         if json["error_info"] is not None:
             raise ConduitException(conduit=self, message=json["error_info"])
         return json
@@ -115,7 +119,8 @@ class ConduitCursor(object):
         self.handle_result(res)
 
     def retry(self):
-        pass
+        res = self.conduit.raw_request(method=self.method, args=self.args)
+        self.handle_result(res)
 
     def next_page(self):
         """
@@ -136,14 +141,18 @@ class ConduitCursor(object):
     def fetch_all(self):
         while self.has_more():
             self.next_page()
+        return self.data
 
-    def handle_result(self, res):
+    def asdict(self, key="id"):
+        return { obj[key]:obj for obj in self.data }
+
+    def handle_result(self, res:requests.Response):
         """
         Process the result from a conduit call and store the records, along
         with a cursor for fetching further pages when the result exceeds the
         limit for a single request. The default and maximum limit is 100.
         """
-        json = res.json()
+        json = res.json(object_hook=json_object_hook)
         if json["error_info"] is not None:
             raise ConduitException(conduit=self.conduit, message=json["error_info"])
 
@@ -166,33 +175,11 @@ class ConduitCursor(object):
     def has_more(self):
         return self.cursor.get("after", None)
 
-    def resolve_phids(self, data=None):
-        if data is None:
-            data = self.data
-
-        if isinstance(data, MutableMapping):
-            iter = data.items()
-        elif isinstance(data, (Iterable, MutableSequence)):
-            iter = enumerate(data)
-        else:
-            return
-
-        for key, val in iter:
-            if key != "phid" and isPHID(val):
-                data[key] = PHObject.instance(val)
-            elif isinstance(val, (MutableSequence, MutableMapping)):
-                self.resolve_phids(data=val)
-
-        if data is self.data and len(PHObject.instances):
-            PHObject.resolve_phids(self.conduit)
-
     def __iter__(self):
         return DataIterator(self.data)
 
     def __getitem__(self, key):
-        if key not in self.data:
-            raise KeyError(key)
-        return wrapitem(self.data[key])
+        return self.data[key]
 
     def __len__(self):
         return len(self.data)
@@ -215,7 +202,8 @@ class ConduitException(Exception):
     def __str__(self):
         return "ConduitException: " + self.message
 
-def flatten_for_post(h, result=None, kk=None):
+
+def flatten_for_post(h, result:dict=None, kk=None) -> dict[str, str]:
     """
     Since phab expects x-url-encoded form post data (meaning each
     individual list element is named). AND because, evidently, requests

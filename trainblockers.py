@@ -4,7 +4,7 @@ import sys
 from collections import UserDict
 from operator import itemgetter
 from pprint import pprint
-from typing import Mapping
+from typing import Callable, Mapping
 
 import pandas as pd
 import requests
@@ -13,34 +13,18 @@ from IPython.display import display
 import ddd
 from ddd.mw import version
 from ddd.phab import Conduit, ConduitException
-from ddd.phobjects import PHIDType, Task, PHObject
+from ddd.phobjects import PHIDRef, PHIDType, Task, PHObject, Transaction, EdgeType
 
 phab = Conduit()
+
 pd.options.display.max_columns = None
 pd.options.display.max_rows = None
-
-# find all train blocker tasks
-
-r = phab.request(
-    "maniphest.search",
-    {
-        "queryKey": "ZKaMIUs_NEXo",
-        "constraints": {
-            'ids': ['249964'],
-        },
-        "limit": "50",
-        "attachments": {"projects": False, "columns": False},
-    },
-)
-
-r.fetch_all()
-
-tasks = {task.id:task for task in r}
+pd.options.display.max_colwidth = None
+pd.options.display.width = 2000
 
 
 def gettransactions(taskids):
     """a generator function that will yield formatted transaction details for a given list of task ids"""
-
     formatters = {}
 
     def ttype(ttype):
@@ -68,24 +52,25 @@ def gettransactions(taskids):
     def edge(t):
         ov = t["oldValue"]
         nv = t["newValue"]
-
-        # some older phabricator transactions had a different format, fixup:
-        if isinstance(nv, Mapping):
-            nv = [key for key in nv.keys()]
-        if isinstance(ov, Mapping):
-            ov = [key for key in ov.keys()]
-
-        # ... we only care about tasks:
-        if len(ov) == 0 and len(nv) > 0 and PHIDType(nv[0]) is Task:
-            return ("added", [obj for obj in map(PHObject.instance, nv)])
-        elif len(ov) > 0 and len(nv) == 0 and PHIDType(ov[0]) is Task:
-            return ("removed", [obj for obj in map(PHObject.instance, ov)])
-        else:
-            print("--- new %s --- old %s ---" % (len(nv), len(ov)))
-            pprint(nv)
-            pprint(ov)
-            # ignore other edge types
+        edgetype = t['meta']['edge:type']
+        if edgetype != EdgeType.SUB_TASK.value:
+            # ignore relationships other than subtasks
+            # print('edgetype: %s' % edgetype)
             return None
+
+        if len(ov) > len(nv):
+            diff = set(ov).difference(nv)
+            action = 'removed'
+        elif len(nv) > len(ov):
+            diff = set(nv).difference(ov)
+            action='added'
+        else:
+            pprint(t)
+            return None
+
+        tasklist = [PHIDRef(obj) for obj in diff]
+        tasklist = tasklist[0] if len(tasklist) == 1 else tasklist
+        return (action, tasklist)
 
     # a subtask was closed or otherwise changed status
     @ttype("unblock")
@@ -94,10 +79,9 @@ def gettransactions(taskids):
         ov = t["oldValue"]
         for item in nv.items():
             phid, action = item
-            return (action, PHObject.instance(phid))
+            return (action, PHIDRef(phid))
 
-    # a comment was added
-    #@ttype("core:comment")
+    @ttype("core:comment")
     def comment(t):
         # todo: we could check for the risky revision template here, if we care
         # to count that.
@@ -111,46 +95,65 @@ def gettransactions(taskids):
         if nv:
             return ('version', nv)
 
-    #@ttype("core:columns")
-    def columns(t):
-        pprint(t)
-
-    #@ttype("status")
-    def status(t):
-        pprint(t)
-
+    # ids = [id for id in tasks.keys()]
+    ids = [id for id in taskids.keys()]
 
     transactions = phab.request(
         "maniphest.gettasktransactions",
         {
-            "ids": tasks.keys(),
+            "ids": ids,
         },
     )
 
     for taskid, t in transactions.result.items():
         st = sorted(t, key=itemgetter("dateCreated"))
         task = tasks[int(taskid)]
+        train_version = ''
         for tr in st:
+
             trnstype = tr["transactionType"]
             if trnstype not in formatters.keys():
                 # Ignore all transactions which do not have a matching formatter
                 # you can uncomment the print statement below to see what other
                 # transaction types are available:
-                print(trnstype)
+                # print(trnstype)
                 continue
             # format the transaction data using the matching formatter function
             formatted = formatters[trnstype](tr)
             # yield the result when there is one:
-            if formatted:
-                yield ('T'+tr['taskID'], tr["dateCreated"], tr['authorPHID'], *formatted)
+            if formatted and formatted[0] == 'version':
+                train_version=formatted[1]
+                formatted = None
 
+            if formatted:
+                yield ('T'+tr['taskID'], train_version, tr["dateCreated"], tr['authorPHID'], *formatted)
+
+
+# find all train blocker tasks
+r = phab.request(
+    "maniphest.search",
+    {
+        "constraints": {
+            'subtypes': ['release'],
+            # 'ids': ['281146'],
+        },
+        "limit": "50",
+        "attachments": {"projects": True, "columns": True},
+    },
+)
+
+r.fetch_all()
+
+#tasks = {task[id]:task for task in r}
+tasks = r.asdict()
 
 # now collect all of the formatted transaction details
 rows = [row for row in gettransactions(tasks)]
 PHObject.resolve_phids(phab)
-columns = ['task', 'timestamp', 'author','action','values']
-data = pd.DataFrame(rows, columns=columns)
-display(data)
+data = pd.DataFrame(rows, columns=[
+    'task', 'version', 'timestamp', 'author', 'action', 'values'])
+grouped = data.groupby(['version', 'action'])
+display(grouped['values'].count())
 
 if __name__ == "__main__":
     pass
