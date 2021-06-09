@@ -1,10 +1,12 @@
 import re
+from typing import NewType, Optional
+MWVersion = NewType('MWVersion', str)
 
-def version(ver):
+def version(ver:str) -> Optional[MWVersion]:
 
     """Validate our version number formats"""
     try:
-        return re.match("(\\d+\\.\\d+(\\.\\d+-)?wmf\\.?\\d+)", ver).group(0)
+        return MWVersion(re.match("(\\d+\\.\\d+(\\.\\d+-)?wmf\\.?\\d+)", ver).group(0))
     except Exception:
         return None
     return None
