@@ -8,10 +8,12 @@ from collections.abc import (
     Collection,
     Mapping,
     MutableMapping,
-    MutableSequence)
+    MutableSequence,
+)
 from pprint import pprint
 from tokenize import Number
-from typing import Union
+from typing import Sequence, Union
+from operator import itemgetter
 
 # todo: remove dependency on requests
 import requests
@@ -20,6 +22,43 @@ from numpy import real
 from ddd.data import Data, DataIterator, wrapitem
 from ddd.phobjects import PHID, PHObject, PhabObjectBase, isPHID, json_object_hook
 
+class Cursor(object):
+    args: MutableMapping
+    cursor: MutableMapping
+    conduit: Conduit
+    data: deque[Data]
+    result: MutableMapping
+
+    def asdict(self, key="id"):
+        return {obj[key]: obj for obj in self.data}
+
+    def next_page(self):
+        """
+        Load the next page of results from conduit, using the cursor that was
+        returned by the most recently fetched page to specify the starting
+        point. This is specified by an "after" argument added to the request.
+        """
+        after = self.cursor.get("after", None)
+        if after is None:
+            raise ConduitException(
+                conduit=self.conduit, message="Cannot fetch pages beyond the last."
+            )
+        args = self.args
+        args["after"] = after
+        res = self.conduit.raw_request(method=self.method, args=args)
+        self.handle_result(res)
+
+    def has_more(self):
+        return self.cursor.get("after", None)
+
+    def fetch_all(self):
+        """ Sequentially Fetch all pages of results from the server. """
+        while self.has_more():
+            self.next_page()
+        return self.data
+
+    def handle_result(self, response):
+        raise ConduitException('Not Implemented')
 
 class Conduit(object):
     phab_url: str = "https://phabricator.wikimedia.org/api/"
@@ -62,7 +101,7 @@ class Conduit(object):
         r = requests.post(f"{self.phab_url}{method}", data=req)
         return r
 
-    def request(self, method: str, args: MutableMapping) -> ConduitCursor:
+    def request(self, method: str, args: MutableMapping) -> Cursor:
         r = self.raw_request(method=method, args=args)
         return ConduitCursor(conduit=self, res=r, method=method, args=args)
 
@@ -89,20 +128,22 @@ class Conduit(object):
             raise ConduitException(conduit=self, message=json["error_info"])
         return json
 
+    def project_search(self, queryKey="all",
+                       constraints: MutableMapping={}) -> Cursor:
 
-class ConduitCursor(object):
+        return self.request('project.search', {
+            "queryKey": queryKey,
+            "constraints": constraints
+        })
+
+class ConduitCursor(Cursor):
     """
     ConduitCursor handles fetching multiple pages of records from the conduit
     api so that one api call can be treated as a single collection of results even
     though it's split across multiple requests to the server.
     """
 
-    conduit: Conduit
-    result: MutableMapping
     method: str
-    args: MutableMapping
-    data: deque[Data]
-    cursor: MutableMapping
 
     def __init__(
         self,
@@ -122,31 +163,7 @@ class ConduitCursor(object):
         res = self.conduit.raw_request(method=self.method, args=self.args)
         self.handle_result(res)
 
-    def next_page(self):
-        """
-        Load the next page of results from conduit, using the cursor that was
-        returned by the most recently fetched page to specify the starting
-        point. This is specified by an "after" argument added to the request.
-        """
-        after = self.cursor.get("after", None)
-        if after is None:
-            raise ConduitException(
-                conduit=self.conduit, message="Cannot fetch pages beyond the last."
-            )
-        args = self.args
-        args["after"] = after
-        res = self.conduit.raw_request(method=self.method, args=args)
-        self.handle_result(res)
-
-    def fetch_all(self):
-        while self.has_more():
-            self.next_page()
-        return self.data
-
-    def asdict(self, key="id"):
-        return { obj[key]:obj for obj in self.data }
-
-    def handle_result(self, res:requests.Response):
+    def handle_result(self, res: requests.Response):
         """
         Process the result from a conduit call and store the records, along
         with a cursor for fetching further pages when the result exceeds the
@@ -172,8 +189,7 @@ class ConduitCursor(object):
             # Older methods just return a result:
             self.data.extend(self.result.values())
 
-    def has_more(self):
-        return self.cursor.get("after", None)
+
 
     def __iter__(self):
         return DataIterator(self.data)
@@ -203,7 +219,7 @@ class ConduitException(Exception):
         return "ConduitException: " + self.message
 
 
-def flatten_for_post(h, result:dict=None, kk=None) -> dict[str, str]:
+def flatten_for_post(h, result: dict = None, kk=None) -> dict[str, str]:
     """
     Since phab expects x-url-encoded form post data (meaning each
     individual list element is named). AND because, evidently, requests

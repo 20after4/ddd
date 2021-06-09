@@ -1,5 +1,6 @@
 from __future__ import annotations
-from collections import UserDict
+from collections import UserDict, deque
+from importlib.resources import path
 from itertools import repeat
 
 import json
@@ -11,8 +12,10 @@ from enum import Enum
 from functools import total_ordering
 from pprint import pprint
 from sqlite3 import Connection
-from typing import (Any, ClassVar, Generic, NewType, Optional, Type, TypeVar,
+from typing import (Any, ClassVar, Deque, Generic, NewType, Optional, Type, TypeVar,
                     Union)
+
+from pathlib import Path
 
 """
  Phabricator Objects
@@ -289,10 +292,15 @@ class PHIDRef(object):
             self.relation = None
 
     def __repr__(self) -> str:
-        return "PHIDRef('%s')" % self.toPHID
+        return f"PHIDRef('{self.toPHID}', object='{self.object}')"
 
     def __str__(self) -> str:
-        return self.toPHID
+        return f"{self.object}"
+
+    def __eq__(self, other) -> bool:
+        return other is self.object or (
+            isinstance(other, PHIDRef) and
+            other.object is self.object)
 
 
 def json_object_hook(obj:dict):
@@ -309,37 +317,69 @@ def json_object_hook(obj:dict):
         return obj
 
 
+def SQLType(name:str, pythontype:Type, sqlkeyword:Optional[str]=None):
+    t = NewType(name, pythontype)
+    t.sqlkw = sqlkeyword if sqlkeyword else name
+    return t
+
+
 class DataCache(object):
+
+    @staticmethod
+    def placeholders(count):
+        return ",".join(repeat("?", count))
+
+    PRIMARYKEY = SQLType('PRIMARY', str, 'PRIMARY KEY')
+    REAL = SQLType('REAL', float)
+    TEXT = SQLType('TEXT', str)
+
     con:sqlite3.Connection
+    table_name:str = "phobjects"
 
-    replace_phobject = """
-    REPLACE INTO phobjects (phid,   name, dateCreated, dateModified, data)
-    VALUES                 (   ?,      ?,           ?,            ?,    ?)
-    """
+    id:REAL
+    phid:PRIMARYKEY
+    authorPHID:TEXT
+    name:TEXT
+    fullname:TEXT
+    dateCreated:REAL
+    dateModified:REAL
+    status:TEXT
+    data:TEXT
 
-    def __init__(self, db):
+    ram_cache:deque = Deque(maxlen=1000)
+
+    def cols(self) -> Sequence:
+        cols = []
+        for field in self.__annotations__.items():
+            if field[1] in (SQLType.types):
+                field = (field[0], str(globals()[field[1]].sqlkw))
+                cols.append(f"{' '.join(field)}")
+        return cols
+
+    def sql_insert(self, cols=None, replace=True):
+        if not cols:
+            cols = self.cols()
+
+        op = "REPLACE" if replace else "INSERT"
+        sql = f"""{op} INTO {self.table_name} ({", ".join(cols)})
+                     VALUES ({self.placeholders(len(cols))})"""
+        return sql
+
+    def __init__(self, db:Path):
         self.con = sqlite3.connect(db)
-        self.con.row_factory = sqlite3.Row()
-        self.con.execute(
-            """CREATE TABLE if not exists phobjects (
-                id real,
-                phid TEXT PRIMARY KEY,
-                authorPHID text,
-                name TEXT,
-                fullname TEXT,
-                dateCreated real,
-                dateModified real,
-                status TEXT,
-                data TEXT
-            ); """)
+        self.con.row_factory = sqlite3.Row
+        self.cur = self.con.cursor()
+        cols = ", ".join(self.cols())
+        sql = f"""CREATE TABLE if not exists {self.table_name} ({cols});"""
+        self.cur.execute(sql)
 
     def load(self, phids):
-        placeholders = ",".join(repeat("?", len(phids)))
-        select = f"SELECT * FROM phobjects where phid in ({placeholders})"
-        if isinstance(phids, list):
-            return self.con.executemany(select, phids)
+        ph = self.placeholders(len(phids))
+        select = f"SELECT * FROM {self.table_name} where phid in ({ph})"
+        if isinstance(phids, (PHID,str)):
+            return self.cur.execute(select, phids)
         else:
-            return self.con.execute(select, phids)
+            return self.cur.executemany(select, phids)
 
     def row(self, item):
         data = json.dumps(item)
@@ -347,8 +387,8 @@ class DataCache(object):
 
     def store_all(self, items:Sequence[PHObject]):
         rows = [self.row(item) for item in items]
-        self.con.executemany(self.replace_phobject, rows)
+        return self.cur.executemany(self.sql_insert(replace=True), rows)
 
     def store_one(self, item:PHObject):
         values = self.row(item)
-        self.con.execute(self.replace_phobject, values)
+        return self.cur.execute(self.sql_insert(replace=True), values)

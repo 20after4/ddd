@@ -1,18 +1,85 @@
 from __future__ import annotations
+from collections import Callable
 from collections import UserDict
 from collections import UserList
-from collections.abc import Collection
 from collections.abc import Iterable
 from collections.abc import MutableMapping
 from collections.abc import MutableSequence
 from collections.abc import Iterator
-
-import json
-import pprint
 from typing import Optional, Union
 
 
+class PropertyMatcher(object):
+    """ Usage example:
 
+        def process_transactions(transactions):
+            mapper = PropertyMatcher()
+
+            @mapper("transactionType=core:edge", "meta.edge:type=41")
+            def edge(t):
+                ''' match project edge transactions '''
+                oldValue = [PHIDRef(p) for p in t["oldValue"]]
+                newValue = [PHIDRef(p) for p in t["newValue"]]
+                return [["projects", '', oldValue, newValue]]
+
+            for taskid, t in transactions.result.items():
+                st = sorted(t, key=itemgetter("dateCreated"))
+                for record in st:
+                    for row in mapper.run(record):
+                        if row:
+                            yield row
+
+
+        transactions = get_some_transactions()
+
+        for row in process_transactions(transactions):
+            # do something with row
+
+    """
+    def __init__(self):
+        self.matchers = []
+        self.patterns = []
+
+    def run(self, obj):
+        for matcher in self.matchers:
+            res = matcher(obj)
+            if res:
+                for row in res:
+                    yield row
+
+    def __call__(self, *args):
+        if len(args) == 1 and isinstance(args[0], Callable):
+            self.fn = args[0]
+        else:
+            self.patterns = []
+            for arg in args:
+                pat, val = arg.split("=")
+                pattern = (pat.split('.'), val)
+                self.patterns.append(pattern)
+
+        def wrapper(func):
+            patterns = self.patterns
+            def matcher(obj):
+                orig = obj
+                matched = False
+                for pattern in patterns:
+                    matched = False
+                    try:
+                        pattern, val = pattern
+                        obj = orig
+                        for item in pattern:
+                            obj = obj[item]
+                        if obj == val:
+                            matched = True
+                    except Exception:
+                        matched = False
+                    if not matched:
+                        return False
+                if matched:
+                    return func(orig)
+            self.matchers.append(matcher)
+            return matcher
+        return wrapper
 
 
 class DataIterator(Iterator):
