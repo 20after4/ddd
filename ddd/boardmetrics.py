@@ -1,35 +1,13 @@
 #!/usr/bin/python3
-from collections.abc import Callable
 from operator import itemgetter
-import pandas as pd
-from IPython.display import display
-from pprint import pprint
 
-import ddd
 from ddd.mw import MWVersion, version
 from ddd.phab import Conduit
 from ddd.phobjects import PHIDRef, PHObject, EdgeType
 from ddd.data import PropertyMatcher
 
-pd.options.display.max_columns = None
-pd.options.display.max_rows = None
-pd.options.display.max_colwidth = 50
-pd.options.display.width = 400
-
 #%%
-phab = Conduit()
-# find all train blocker tasks
-r = phab.request(
-    "maniphest.search",
-    {
-        "constraints": {"projects": ["release-engineering-team"]},
-        "limit": "30",
-        "attachments": {"projects": True, "columns": True},
-    },
-)
-#%%
-
-def gettransactions(taskids):
+def gettransactions(phab:Conduit, taskids):
     mapper = PropertyMatcher()
     ids = [id for id in taskids.keys()]
     transactions = phab.request(
@@ -60,31 +38,6 @@ def gettransactions(taskids):
     def status(t):
         return [("status",'', t["oldValue"], t["newValue"])]
 
-    # @trnstype("unblock")
-    def unblock(t):
-        """a subtask was closed or otherwise changed status"""
-        nv = t["newValue"]
-
-        for item in nv.items():
-            phid, action = item
-            return [[action, PHIDRef(phid)]]
-
-    # @trnstype("core:comment")
-    def comment(t):
-        # todo: we could check for the risky revision template here, if we care
-        # to count that.
-        nl = "\\n"
-        txt = str(t["comments"]).replace("\n", nl)
-        return [["comment", txt]]
-
-    @mapper('ransactionType=core:customfield')
-    def customfield(t):
-        """Collect the version number from the release.version custom field"""
-        nv = version(str(t["newValue"]))
-        if nv:
-            train["version"] = nv
-        return None
-
     @mapper('transactionType=core:columns')
     def columns(t):
         newv = t["newValue"]
@@ -106,18 +59,40 @@ def gettransactions(taskids):
                     yield newrow
 
 #%%
+def main():
+    import pandas as pd
+    from IPython.display import display
 
-# r.fetch_all()
-tasks = r.asdict()
-# now collect all of the formatted transaction details
-rows = [row for row in gettransactions(tasks)]
+    phab = Conduit()
 
-PHObject.resolve_phids(phab)
+    # find all train blocker tasks
+    r = phab.request(
+        "maniphest.search",
+        {
+            "constraints": {"projects": ["release-engineering-team"]},
+            "limit": "30",
+            "attachments": {"projects": True, "columns": True},
+        },
+    )
+    # r.fetch_all()
+    tasks = r.asdict()
+    # now collect all of the formatted transaction details
+    rows = [row for row in gettransactions(phab, tasks)]
 
-#%%
-data = pd.DataFrame.from_records(
-    rows,
-    columns=["ts", "task", "description", "what", "from", "to"],
-    index=["ts", "task"],
-)
-display(data)
+    PHObject.resolve_phids(phab)
+
+    #%%
+    pd.options.display.max_columns = None
+    pd.options.display.max_rows = None
+    pd.options.display.max_colwidth = 50
+    pd.options.display.width = 400
+
+    data = pd.DataFrame.from_records(
+        rows,
+        columns=["ts", "task", "description", "what", "from", "to"],
+        index=["ts", "task"],
+    )
+    display(data)
+
+if __name__ == '__main__':
+    main()

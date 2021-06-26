@@ -17,7 +17,6 @@ from operator import itemgetter
 
 # todo: remove dependency on requests
 import requests
-from numpy import real
 
 from ddd.data import Data, DataIterator, wrapitem
 from ddd.phobjects import PHID, PHObject, PhabObjectBase, isPHID, json_object_hook
@@ -28,6 +27,7 @@ class Cursor(object):
     conduit: Conduit
     data: deque[Data]
     result: MutableMapping
+    method: str
 
     def asdict(self, key="id"):
         return {obj[key]: obj for obj in self.data}
@@ -142,9 +142,6 @@ class ConduitCursor(Cursor):
     api so that one api call can be treated as a single collection of results even
     though it's split across multiple requests to the server.
     """
-
-    method: str
-
     def __init__(
         self,
         conduit: Conduit,
@@ -179,7 +176,7 @@ class ConduitCursor(Cursor):
             self.cursor = self.result["cursor"]
         else:
             self.cursor = {}
-        # pprint(self.result)
+
         if "data" in self.result:
             # Modern conduit methods return a result map with the key "data"
             # mapped to a list of records and the key "cursor" maps to a record
@@ -188,8 +185,6 @@ class ConduitCursor(Cursor):
         else:
             # Older methods just return a result:
             self.data.extend(self.result.values())
-
-
 
     def __iter__(self):
         return DataIterator(self.data)
