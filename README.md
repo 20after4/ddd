@@ -21,10 +21,25 @@ let alone completely implemented. Stay tuned or get involved.
 
 # Usage
 
-The most useful bits of code that can be found in this repo are demonstrated
-with the following code examples:
+## boardmetrics.py
 
-# Example:
+This tool is used to extract data from phabricator and organize it in a structure that will facilitate further analysis.
+The analysis of task activities can provide some insight into workflows.
+The output if this tool will be used as the data source for charts to visualize certain agile project planning metrics.
+
+Example usage (this is rough and can be simplified with a bit more refinement.)
+
+From the project directory:
+```bash
+./ddd/boardmetrics.py --project=PHID-PROJ-fmcvjrkfvvzz3gxavs3a --mock=test/train.transactions.json --dump=json > metrics.json
+```
+
+This calculates data for the given project PHID, using data from a mock api call result (to speed up testing) and dumps the output as json.
+
+If you omit the --mock argument then it will request a rather large amount of data from the phabricator API which takes an extra 20+ seconds to fetch.
+
+
+# Example code:
 
 ```python
 from ddd.phab import Conduit

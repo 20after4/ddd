@@ -21,6 +21,7 @@ import requests
 from ddd.data import Data, DataIterator, wrapitem
 from ddd.phobjects import PHID, PHObject, PhabObjectBase, isPHID, json_object_hook
 
+
 class Cursor(object):
     args: MutableMapping
     cursor: MutableMapping
@@ -52,13 +53,14 @@ class Cursor(object):
         return self.cursor.get("after", None)
 
     def fetch_all(self):
-        """ Sequentially Fetch all pages of results from the server. """
+        """Sequentially Fetch all pages of results from the server."""
         while self.has_more():
             self.next_page()
         return self.data
 
     def handle_result(self, response):
-        raise ConduitException('Not Implemented')
+        raise ConduitException("Not Implemented")
+
 
 class Conduit(object):
     phab_url: str = "https://phabricator.wikimedia.org/api/"
@@ -67,6 +69,8 @@ class Conduit(object):
     def __init__(self, phab_url: str = None, token: str = None):
         if phab_url:
             self.phab_url = phab_url
+        else:
+            self.phab_url = os.environ.get("CONDUIT_URL", self.phab_url)
 
         if token:
             self.token = token
@@ -91,7 +95,7 @@ class Conduit(object):
 
         return os.environ.get("CONDUIT_TOKEN", token)
 
-    def raw_request(self, method: str, args: Mapping) -> requests.Response:
+    def raw_request(self, method: str, args: MutableMapping) -> requests.Response:
         """
         Helper method to call a phabricator api and return a ConduitCursor
         which can be used to iterate over all of the resulting records.
@@ -128,13 +132,30 @@ class Conduit(object):
             raise ConduitException(conduit=self, message=json["error_info"])
         return json
 
-    def project_search(self, queryKey="all",
-                       constraints: MutableMapping={}) -> Cursor:
+    def project_search(
+        self, queryKey="all", constraints: MutableMapping = {}
+    ) -> Cursor:
+        """Find projects"""
+        return self.request(
+            "project.search", {"queryKey": queryKey, "constraints": constraints}
+        )
 
-        return self.request('project.search', {
-            "queryKey": queryKey,
-            "constraints": constraints
-        })
+    def project_columns(
+        self, project: PHID = None, column_phids: Sequence = None
+    ) -> Cursor:
+        """Find all column data for the given project, or supply a list of column phids to fetch.
+        see https://phabricator.wikimedia.org/conduit/method/project.column.search/
+        """
+        constraints = {}
+        if project:
+            constraints["projects"] = [project]
+        if column_phids:
+            constraints["phids"] = column_phids
+        return self.request(
+            "project.column.search",
+            {"queryKey": "all", "order": "newest", "constraints": constraints},
+        )
+
 
 class ConduitCursor(Cursor):
     """
@@ -142,6 +163,7 @@ class ConduitCursor(Cursor):
     api so that one api call can be treated as a single collection of results even
     though it's split across multiple requests to the server.
     """
+
     def __init__(
         self,
         conduit: Conduit,

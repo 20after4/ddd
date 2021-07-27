@@ -1,0 +1,864 @@
+{
+  "result": {
+    "281158": [
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_0\"\u003eJdlrobson\u003c\/a\u003e mentioned this in \u003ca href=\"\/T281159\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_1\"\u003eT281159: 1.37.0-wmf.18 deployment blockers\u003c\/a\u003e.",
+        "transactionID": "7273774",
+        "transactionPHID": "PHID-XACT-TASK-nofjfibfmemfviv",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-43vngygbmnehlelkzeei"
+        ],
+        "meta": {
+          "edge:type": 51,
+          "core.groupID": "gonk6hu27wvbgtqth5kbn4doz7q7snif"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1628627719"
+      },
+      {
+        "taskID": "281158",
+        "action": "Closed",
+        "title": "\u003ca href=\"\/p\/dduvall\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_2\"\u003edduvall\u003c\/a\u003e closed this task as \u003cspan class=\"phui-timeline-value\"\u003eResolved\u003c\/span\u003e.",
+        "transactionID": "7268562",
+        "transactionPHID": "PHID-XACT-TASK-iid6nl2cwt25tlw",
+        "transactionType": "status",
+        "oldValue": "open",
+        "newValue": "resolved",
+        "meta": {
+          "core.groupID": "jrpfzlztxfti4avfmykvmho7uc4h5b56"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-7bifphmxtcqgvdofuzla",
+        "dateCreated": "1628447748"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_3\"\u003eJdlrobson\u003c\/a\u003e removed a subtask: \u003ca href=\"\/T287058\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_4\"\u003eT287058: Regression: Icon hacks in Popups need to be revised\u003c\/a\u003e.",
+        "transactionID": "7267776",
+        "transactionPHID": "PHID-XACT-TASK-z5rroqdkkgag4w3",
+        "transactionType": "core:edge",
+        "oldValue": [
+          "PHID-TASK-lgds4milhlrwbjjtfcv6"
+        ],
+        "newValue": [],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "jominm64wqxnreg56yqg4ir6ccdk3p6m"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1628295764"
+      },
+      {
+        "taskID": "281158",
+        "action": "Unblock",
+        "title": "\u003ca href=\"\/p\/Jdforrester-WMF\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_5\"\u003eJdforrester-WMF\u003c\/a\u003e closed subtask \u003ca href=\"\/T288191\" class=\"phui-handle handle-status-closed\"\u003eT288191: substituting {{#tag:ref}} tags and templates; and pipe tricks fail in Page namespace\u003c\/a\u003e as \u003cspan class=\"phui-timeline-value\"\u003eResolved\u003c\/span\u003e.",
+        "transactionID": "7265296",
+        "transactionPHID": "PHID-XACT-TASK-vyhymezygp2k3p4",
+        "transactionType": "unblock",
+        "oldValue": {
+          "PHID-TASK-cwrecii3v5fwdse7lvmp": "open"
+        },
+        "newValue": {
+          "PHID-TASK-cwrecii3v5fwdse7lvmp": "resolved"
+        },
+        "meta": {
+          "core.groupID": "vw5msc37fno6ejelhrys3ikabduwobj4"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-ydswvwhh5pm4lshahjje",
+        "dateCreated": "1628201608"
+      },
+      {
+        "taskID": "281158",
+        "action": "Unblock",
+        "title": "\u003ca href=\"\/p\/Jdforrester-WMF\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_6\"\u003eJdforrester-WMF\u003c\/a\u003e closed subtask \u003ca href=\"\/T288288\" class=\"phui-handle handle-status-closed\"\u003eT288288: 1.37.0-wmf.17 deployment moved footer from bottom of the page to left column in Monobook\u003c\/a\u003e as \u003cspan class=\"phui-timeline-value\"\u003eResolved\u003c\/span\u003e.",
+        "transactionID": "7265118",
+        "transactionPHID": "PHID-XACT-TASK-gqchqylomk7a4bz",
+        "transactionType": "unblock",
+        "oldValue": {
+          "PHID-TASK-eut5w4uqr7v3aryahyq5": "open"
+        },
+        "newValue": {
+          "PHID-TASK-eut5w4uqr7v3aryahyq5": "resolved"
+        },
+        "meta": {
+          "core.groupID": "c2ag4jjr72lfqvvfryz73uxl6rlpnmy6"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-ydswvwhh5pm4lshahjje",
+        "dateCreated": "1628200180"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/mmodell\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_7\"\u003emmodell\u003c\/a\u003e mentioned this in \u003ca href=\"\/T288288\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_8\"\u003eT288288: 1.37.0-wmf.17 deployment moved footer from bottom of the page to left column in Monobook\u003c\/a\u003e.",
+        "transactionID": "7264922",
+        "transactionPHID": "PHID-XACT-TASK-stvsr62yd7hmt6r",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-eut5w4uqr7v3aryahyq5"
+        ],
+        "meta": {
+          "edge:type": 51,
+          "core.groupID": "znd7czll443e5zk5moz3dvaylrz3vs5x"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-fn7qnpccfbitivgtw2rt",
+        "dateCreated": "1628196196"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Raymond\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_9\"\u003eRaymond\u003c\/a\u003e added a subtask: \u003ca href=\"\/T288288\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_10\"\u003eT288288: 1.37.0-wmf.17 deployment moved footer from bottom of the page to left column in Monobook\u003c\/a\u003e.",
+        "transactionID": "7264877",
+        "transactionPHID": "PHID-XACT-TASK-wuhjp4yvossc4no",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-eut5w4uqr7v3aryahyq5"
+        ],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "gwi4xg2debibkubvw2gdrkfjaw6huvkh"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-3uecblbxq24ycewm2cog",
+        "dateCreated": "1628195338"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_11\"\u003eStashbot\u003c\/a\u003e mentioned this in \u003ca href=\"\/T288191\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_12\"\u003eT288191: substituting {{#tag:ref}} tags and templates; and pipe tricks fail in Page namespace\u003c\/a\u003e.",
+        "transactionID": "7264856",
+        "transactionPHID": "PHID-XACT-TASK-2wksxcrrwpxufzz",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-cwrecii3v5fwdse7lvmp"
+        ],
+        "meta": {
+          "edge:type": 51,
+          "core.groupID": "4i3m7cnatltzmb2etmkr6vcrn4o33hip"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628195018"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_13\"\u003eStashbot\u003c\/a\u003e added a comment.",
+        "transactionID": "7264852",
+        "transactionPHID": "PHID-XACT-TASK-bk7alrvzwsbjkrr",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "6rfxytgvyvtoenv5ygxm5cvqy7na6e23"
+        },
+        "comments": "{nav icon=file, name=Mentioned in SAL (#wikimedia-operations), href=https:\/\/sal.toolforge.org\/log\/MUz8F3sB1jz_IcWuT1oD} [2021-08-05T20:23:36Z] \u003cdduvall\u003e 1.37.0-wmf.17 promoted to all wikis. no new errors or concerning rates (T281158). fixes for open UBN T288191 will be handled via backport (see task discussion)",
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628195017"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_14\"\u003eStashbot\u003c\/a\u003e added an edge: \u003ca href=\"\/T288191\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_15\"\u003eT288191: substituting {{#tag:ref}} tags and templates; and pipe tricks fail in Page namespace\u003c\/a\u003e.",
+        "transactionID": "7264851",
+        "transactionPHID": "PHID-XACT-TASK-o4znvyalwng2yle",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-cwrecii3v5fwdse7lvmp"
+        ],
+        "meta": {
+          "edge:type": 52,
+          "core.groupID": "6rfxytgvyvtoenv5ygxm5cvqy7na6e23"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628195017"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/p\/Raymond\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_16\"\u003eRaymond\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/Raymond\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_17\"\u003eRaymond\u003c\/a\u003e.",
+        "transactionID": "7264840",
+        "transactionPHID": "PHID-XACT-TASK-phijh46bkigpcwg",
+        "transactionType": "core:subscribers",
+        "oldValue": [
+          "PHID-USER-5dwuaigmkz2vzg65lape",
+          "PHID-USER-ctchvhisqfvk4rz7nt7d",
+          "PHID-USER-5dv7dcltvyvolwzbm2af",
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "newValue": [
+          "PHID-USER-5dwuaigmkz2vzg65lape",
+          "PHID-USER-ctchvhisqfvk4rz7nt7d",
+          "PHID-USER-5dv7dcltvyvolwzbm2af",
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal",
+          "PHID-USER-3uecblbxq24ycewm2cog"
+        ],
+        "meta": {
+          "core.groupID": "7i2l2xykq7hou77rv75kttayqslzadps"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-3uecblbxq24ycewm2cog",
+        "dateCreated": "1628194793"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/DannyS712\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_18\"\u003eDannyS712\u003c\/a\u003e added a subtask: \u003ca href=\"\/T288191\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_19\"\u003eT288191: substituting {{#tag:ref}} tags and templates; and pipe tricks fail in Page namespace\u003c\/a\u003e.",
+        "transactionID": "7262080",
+        "transactionPHID": "PHID-XACT-TASK-hrk6vpwi65iorhd",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-cwrecii3v5fwdse7lvmp"
+        ],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "qgdybhsw76mt5ckn3wfjlxojtnnkhuvw"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-ilk3nopl66nufkd26tee",
+        "dateCreated": "1628139852"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_20\"\u003eStashbot\u003c\/a\u003e added a comment.",
+        "transactionID": "7261103",
+        "transactionPHID": "PHID-XACT-TASK-abwdrlyxc5vgjjz",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "wyozchhdvoy3gzzyyg7fyvvtsbql3uyb"
+        },
+        "comments": "{nav icon=file, name=Mentioned in SAL (#wikimedia-operations), href=https:\/\/sal.toolforge.org\/log\/p06dEnsBa_6PSCT9-kHN} [2021-08-04T19:22:28Z] \u003cdduvall\u003e 1.37.0-wmf.17 promoted to group1. no new errors or troubling error rates spotted (T281158)",
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628104948"
+      },
+      {
+        "taskID": "281158",
+        "action": "Unblock",
+        "title": "\u003ca href=\"\/p\/dduvall\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_21\"\u003edduvall\u003c\/a\u003e closed subtask \u003ca href=\"\/T287988\" class=\"phui-handle handle-status-closed\"\u003eT287988: PHP Warning: Class __PHP_Incomplete_Class has no unserializer\u003c\/a\u003e as \u003cspan class=\"phui-timeline-value\"\u003eResolved\u003c\/span\u003e.",
+        "transactionID": "7257483",
+        "transactionPHID": "PHID-XACT-TASK-3uhkg65iv5jbjn5",
+        "transactionType": "unblock",
+        "oldValue": {
+          "PHID-TASK-pi3qtdimkgfykkosdjn2": "open"
+        },
+        "newValue": {
+          "PHID-TASK-pi3qtdimkgfykkosdjn2": "resolved"
+        },
+        "meta": {
+          "core.groupID": "6tdsic6pjoadwgu23nsnmrrzlm32hx6d"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-7bifphmxtcqgvdofuzla",
+        "dateCreated": "1628030340"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_22\"\u003eStashbot\u003c\/a\u003e mentioned this in \u003ca href=\"\/T287988\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_23\"\u003eT287988: PHP Warning: Class __PHP_Incomplete_Class has no unserializer\u003c\/a\u003e.",
+        "transactionID": "7257479",
+        "transactionPHID": "PHID-XACT-TASK-kirnsf7tou7zzon",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-pi3qtdimkgfykkosdjn2"
+        ],
+        "meta": {
+          "edge:type": 51,
+          "core.groupID": "kzxiw53kmy6rskfpfsdxvxzg4tlv6ho5"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628030238"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_24\"\u003eStashbot\u003c\/a\u003e added a comment.",
+        "transactionID": "7257475",
+        "transactionPHID": "PHID-XACT-TASK-5rutciuzpx6uwzt",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "evdlemvtbgfc3tnae2g3tm6xeue6hrc7"
+        },
+        "comments": "{nav icon=file, name=Mentioned in SAL (#wikimedia-operations), href=https:\/\/sal.toolforge.org\/log\/_UIpDnsB1jz_IcWu-Kcb} [2021-08-03T22:37:16Z] \u003cdduvall\u003e re-rolled 1.37.0-wmf.17 to group0 following rollback and subsequent fixes for T287988 (T281158)",
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628030237"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Stashbot\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_25\"\u003eStashbot\u003c\/a\u003e added an edge: \u003ca href=\"\/T287988\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_26\"\u003eT287988: PHP Warning: Class __PHP_Incomplete_Class has no unserializer\u003c\/a\u003e.",
+        "transactionID": "7257474",
+        "transactionPHID": "PHID-XACT-TASK-p65xhwth7zkwzbn",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-pi3qtdimkgfykkosdjn2"
+        ],
+        "meta": {
+          "edge:type": 52,
+          "core.groupID": "evdlemvtbgfc3tnae2g3tm6xeue6hrc7"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-j4uyesgqhubl2dywl4xd",
+        "dateCreated": "1628030237"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/dduvall\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_27\"\u003edduvall\u003c\/a\u003e added a subtask: \u003ca href=\"\/T287988\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_28\"\u003eT287988: PHP Warning: Class __PHP_Incomplete_Class has no unserializer\u003c\/a\u003e.",
+        "transactionID": "7256796",
+        "transactionPHID": "PHID-XACT-TASK-2pvnbngyiemlbgi",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-pi3qtdimkgfykkosdjn2"
+        ],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "eyydhg2x252knpyl5vuwlvojg6qyg7dn"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-7bifphmxtcqgvdofuzla",
+        "dateCreated": "1628019470"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/dduvall\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_29\"\u003edduvall\u003c\/a\u003e added a comment.",
+        "transactionID": "7256721",
+        "transactionPHID": "PHID-XACT-TASK-j25md5mquka366d",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "q37wp7xx27yg4vu7e77yq6mr3qpebr7r"
+        },
+        "comments": "\u003e\u003e! In T281158#7256035, @Ladsgroup wrote:\n\u003e It's https:\/\/gerrit.wikimedia.org\/r\/c\/mediawiki\/extensions\/FlaggedRevs\/+\/709218 but I don't think it's big enough to warrant a \"risky patch\" comment\n\n\ud83d\udc4d\ud83c\udffd ",
+        "authorPHID": "PHID-USER-7bifphmxtcqgvdofuzla",
+        "dateCreated": "1628018133"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/Ladsgroup\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_30\"\u003eLadsgroup\u003c\/a\u003e added a comment.",
+        "transactionID": "7256035",
+        "transactionPHID": "PHID-XACT-TASK-kgi6maqcic7j6tj",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "qtv7gu3aq5mx5xsh6exhz7h6yrbfyvw3"
+        },
+        "comments": "It's https:\/\/gerrit.wikimedia.org\/r\/c\/mediawiki\/extensions\/FlaggedRevs\/+\/709218 but I don't think it's big enough to warrant a \"risky patch\" comment",
+        "authorPHID": "PHID-USER-ctchvhisqfvk4rz7nt7d",
+        "dateCreated": "1628007374"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/dduvall\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_31\"\u003edduvall\u003c\/a\u003e added a comment.",
+        "transactionID": "7256016",
+        "transactionPHID": "PHID-XACT-TASK-zk6wsuatklpkskp",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "wfts26aify6ddhbzpcxzu4fvmlpwylab"
+        },
+        "comments": "\u003e\u003e! In T281158#7253300, @Ladsgroup wrote:\n\u003e o\/ If you see anything with flagged revs, ping me.\n\nThanks! Is there any risky patch in particular that bears mentioning here?",
+        "authorPHID": "PHID-USER-7bifphmxtcqgvdofuzla",
+        "dateCreated": "1628007190"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_32\"\u003eJdlrobson\u003c\/a\u003e added a comment.",
+        "transactionID": "7253330",
+        "transactionPHID": "PHID-XACT-TASK-fa274r7sy36x6vx",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "g47hiyb4rp4ctducgioeghuib5ruprz6"
+        },
+        "comments": "FYI to the train conductor:\n\nThis week might see some bug reports around missing user interface styles in MonoBook, Modern and CologneBlue skins relating to T287410. \nThis week might also see some complaints from MonoBook users due to a disruption caused by a user preference switchover which users were notified about in T285991. This is not a regression and is easily fixed by a visit to Special:Preferences.\n\nNeither of these should be treated as deploy blockers if encountered but please redirect any users or bug reports to me and\/or the relevant tickets as appropriate.",
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1627931654"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_33\"\u003eJdlrobson\u003c\/a\u003e added edges: \u003ca href=\"\/T287410\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_34\"\u003eT287410: ResourceLoaderSkinModule: Skins should not use the legacy styling feature\u003c\/a\u003e, \u003ca href=\"\/T285991\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_35\"\u003eT285991: MonoBook users should check their preferences to avoid disruption\u003c\/a\u003e.",
+        "transactionID": "7253329",
+        "transactionPHID": "PHID-XACT-TASK-alrfminvh2mr4i2",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-sogx76sebokgqga5ykin",
+          "PHID-TASK-qf5hahvuo3guocll6cbf"
+        ],
+        "meta": {
+          "edge:type": 52,
+          "core.groupID": "g47hiyb4rp4ctducgioeghuib5ruprz6"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1627931654"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_36\"\u003eJdlrobson\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_37\"\u003eJdlrobson\u003c\/a\u003e.",
+        "transactionID": "7253328",
+        "transactionPHID": "PHID-XACT-TASK-tefthm6ow4rg76b",
+        "transactionType": "core:subscribers",
+        "oldValue": [
+          "PHID-USER-ctchvhisqfvk4rz7nt7d",
+          "PHID-USER-5dv7dcltvyvolwzbm2af",
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "newValue": [
+          "PHID-USER-ctchvhisqfvk4rz7nt7d",
+          "PHID-USER-5dv7dcltvyvolwzbm2af",
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal",
+          "PHID-USER-5dwuaigmkz2vzg65lape"
+        ],
+        "meta": {
+          "core.groupID": "g47hiyb4rp4ctducgioeghuib5ruprz6"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1627931654"
+      },
+      {
+        "taskID": "281158",
+        "action": "Commented On",
+        "title": "\u003ca href=\"\/p\/Ladsgroup\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_38\"\u003eLadsgroup\u003c\/a\u003e added a comment.",
+        "transactionID": "7253300",
+        "transactionPHID": "PHID-XACT-TASK-5unyg76iezkmd2o",
+        "transactionType": "core:comment",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.groupID": "s7zm6vrdpg7iouzprso6gdfpi5v7ndnw"
+        },
+        "comments": "o\/ If you see anything with flagged revs, ping me.",
+        "authorPHID": "PHID-USER-ctchvhisqfvk4rz7nt7d",
+        "dateCreated": "1627931078"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/p\/Ladsgroup\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_39\"\u003eLadsgroup\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/Ladsgroup\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_40\"\u003eLadsgroup\u003c\/a\u003e.",
+        "transactionID": "7253299",
+        "transactionPHID": "PHID-XACT-TASK-2nt72343jt4qzjd",
+        "transactionType": "core:subscribers",
+        "oldValue": [
+          "PHID-USER-5dv7dcltvyvolwzbm2af",
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "newValue": [
+          "PHID-USER-5dv7dcltvyvolwzbm2af",
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal",
+          "PHID-USER-ctchvhisqfvk4rz7nt7d"
+        ],
+        "meta": {
+          "core.groupID": "s7zm6vrdpg7iouzprso6gdfpi5v7ndnw"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-ctchvhisqfvk4rz7nt7d",
+        "dateCreated": "1627931078"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/p\/Jakob_WMDE\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_41\"\u003eJakob_WMDE\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/Jakob_WMDE\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_42\"\u003eJakob_WMDE\u003c\/a\u003e.",
+        "transactionID": "7251416",
+        "transactionPHID": "PHID-XACT-TASK-h53srrvhkteysx4",
+        "transactionType": "core:subscribers",
+        "oldValue": [
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "newValue": [
+          "PHID-USER-fn7qnpccfbitivgtw2rt",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal",
+          "PHID-USER-5dv7dcltvyvolwzbm2af"
+        ],
+        "meta": {
+          "core.groupID": "elwvuvbr5fn2isoumb4lmvi3766o5kgr"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dv7dcltvyvolwzbm2af",
+        "dateCreated": "1627899549"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_43\"\u003eJdlrobson\u003c\/a\u003e removed a subtask: \u003ca href=\"\/T287052\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_44\"\u003eT287052: Regression: More menu dropdown font-size is too big in legacy Vector\u003c\/a\u003e.",
+        "transactionID": "7229070",
+        "transactionPHID": "PHID-XACT-TASK-jfhawngjstrcvjz",
+        "transactionType": "core:edge",
+        "oldValue": [
+          "PHID-TASK-vlyvjtjc25kgtgut4bg5"
+        ],
+        "newValue": [],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "nn3g5xzdnaeg32encrpwaqwbstnjysxt"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1626910968"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_45\"\u003ethcipriani\u003c\/a\u003e updated Other Assignee, added: \u003ca href=\"\/p\/mmodell\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_46\"\u003emmodell\u003c\/a\u003e; removed: \u003ca href=\"\/p\/hashar\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_47\"\u003ehashar\u003c\/a\u003e.",
+        "transactionID": "7228568",
+        "transactionPHID": "PHID-XACT-TASK-jrdvitldptnccqh",
+        "transactionType": "core:customfield",
+        "oldValue": "[\"PHID-USER-orzyp3dswemhdgdznro5\"]",
+        "newValue": "[\"PHID-USER-fn7qnpccfbitivgtw2rt\"]",
+        "meta": {
+          "customfield:key": "std:maniphest:train.backup",
+          "core.groupID": "prrdvc4grqgygoavdhukyoexe5ggvnla"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1626898081"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_48\"\u003ethcipriani\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/mmodell\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_49\"\u003emmodell\u003c\/a\u003e.",
+        "transactionID": "7228567",
+        "transactionPHID": "PHID-XACT-TASK-5i2vz76entywm6t",
+        "transactionType": "core:subscribers",
+        "oldValue": [
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "newValue": [
+          "PHID-USER-hgn5uw2jafgjgfvxibhh",
+          "PHID-USER-5ewyncd6mpezaymyxfal",
+          "PHID-USER-fn7qnpccfbitivgtw2rt"
+        ],
+        "meta": {
+          "core.groupID": "prrdvc4grqgygoavdhukyoexe5ggvnla"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1626898081"
+      },
+      {
+        "taskID": "281158",
+        "action": "Reassigned",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_50\"\u003ethcipriani\u003c\/a\u003e reassigned this task from \u003ca href=\"\/p\/mmodell\/\" class=\"phui-handle phui-link-person\"\u003emmodell\u003c\/a\u003e to \u003ca href=\"\/p\/dduvall\/\" class=\"phui-handle phui-link-person\"\u003edduvall\u003c\/a\u003e.",
+        "transactionID": "7228566",
+        "transactionPHID": "PHID-XACT-TASK-stp42j4grtmnq4m",
+        "transactionType": "reassign",
+        "oldValue": "PHID-USER-fn7qnpccfbitivgtw2rt",
+        "newValue": "PHID-USER-7bifphmxtcqgvdofuzla",
+        "meta": {
+          "core.groupID": "prrdvc4grqgygoavdhukyoexe5ggvnla"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1626898081"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_51\"\u003eJdlrobson\u003c\/a\u003e added a subtask: \u003ca href=\"\/T287052\" class=\"phui-handle handle-status-closed\" data-sigil=\"hovercard\" data-meta=\"0_52\"\u003eT287052: Regression: More menu dropdown font-size is too big in legacy Vector\u003c\/a\u003e.",
+        "transactionID": "7226212",
+        "transactionPHID": "PHID-XACT-TASK-2wljswfp4u7ta74",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-vlyvjtjc25kgtgut4bg5"
+        ],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "a2za5tawtp2hknom36okl65wb2hbju6a"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1626830489"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/Jdlrobson\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_53\"\u003eJdlrobson\u003c\/a\u003e added a subtask: \u003ca href=\"\/T287058\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_54\"\u003eT287058: Regression: Icon hacks in Popups need to be revised\u003c\/a\u003e.",
+        "transactionID": "7226210",
+        "transactionPHID": "PHID-XACT-TASK-ivykym6qf4q3ecv",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-TASK-lgds4milhlrwbjjtfcv6"
+        ],
+        "meta": {
+          "edge:type": 3,
+          "core.groupID": "6zjocds5vre3fnwiaon7eeqiozzkfln2"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5dwuaigmkz2vzg65lape",
+        "dateCreated": "1626830466"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_55\"\u003ethcipriani\u003c\/a\u003e added a project: \u003ca href=\"\/project\/view\/5321\/\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_56\"\u003eRelease-Engineering-Team (Doing)\u003c\/a\u003e.",
+        "transactionID": "7137043",
+        "transactionPHID": "PHID-XACT-TASK-kzs2h5fk5avj4gd",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-PROJ-kthruysi3rap4wi57vqa"
+        ],
+        "meta": {
+          "edge:type": 41,
+          "core.groupID": "wh4huuf5zhde2iasxpc54td37ws2sp4d"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1623011915"
+      },
+      {
+        "taskID": "281158",
+        "action": "Triaged",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_57\"\u003ethcipriani\u003c\/a\u003e triaged this task as \u003cspan class=\"phui-timeline-value\"\u003eMedium\u003c\/span\u003e priority.",
+        "transactionID": "7137042",
+        "transactionPHID": "PHID-XACT-TASK-bmgr2ikbofgofxu",
+        "transactionType": "priority",
+        "oldValue": "90",
+        "newValue": "50",
+        "meta": {
+          "core.groupID": "wh4huuf5zhde2iasxpc54td37ws2sp4d"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1623011915"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_58\"\u003ethcipriani\u003c\/a\u003e updated Other Assignee, added: \u003ca href=\"\/p\/hashar\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_59\"\u003ehashar\u003c\/a\u003e.",
+        "transactionID": "7137041",
+        "transactionPHID": "PHID-XACT-TASK-ig6yxeskq3xshbs",
+        "transactionType": "core:customfield",
+        "oldValue": null,
+        "newValue": "[\"PHID-USER-orzyp3dswemhdgdznro5\"]",
+        "meta": {
+          "customfield:key": "std:maniphest:train.backup",
+          "core.groupID": "wh4huuf5zhde2iasxpc54td37ws2sp4d"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1623011915"
+      },
+      {
+        "taskID": "281158",
+        "action": "Assigned",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_60\"\u003ethcipriani\u003c\/a\u003e assigned this task to \u003ca href=\"\/p\/mmodell\/\" class=\"phui-handle phui-link-person\"\u003emmodell\u003c\/a\u003e.",
+        "transactionID": "7137040",
+        "transactionPHID": "PHID-XACT-TASK-omjw2au5pw6ofkk",
+        "transactionType": "reassign",
+        "oldValue": null,
+        "newValue": "PHID-USER-fn7qnpccfbitivgtw2rt",
+        "meta": {
+          "core.groupID": "wh4huuf5zhde2iasxpc54td37ws2sp4d"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1623011915"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/herald\/\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_61\"\u003eHerald\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/Aklapper\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_62\"\u003eAklapper\u003c\/a\u003e.",
+        "transactionID": "7034482",
+        "transactionPHID": "PHID-XACT-TASK-ijefzxyifvh3oao",
+        "transactionType": "core:subscribers",
+        "oldValue": [
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "newValue": [
+          "PHID-USER-5ewyncd6mpezaymyxfal",
+          "PHID-USER-hgn5uw2jafgjgfvxibhh"
+        ],
+        "meta": {
+          "herald:transcriptID": 4227087,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-APPS-PhabricatorHeraldApplication",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Changed Subscribers",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_63\"\u003ethcipriani\u003c\/a\u003e added a subscriber: \u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_64\"\u003ethcipriani\u003c\/a\u003e.",
+        "transactionID": "7034481",
+        "transactionPHID": "PHID-XACT-TASK-nz6yr5bnq2rioa2",
+        "transactionType": "core:subscribers",
+        "oldValue": [],
+        "newValue": [
+          "PHID-USER-5ewyncd6mpezaymyxfal"
+        ],
+        "meta": {
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Created",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_65\"\u003ethcipriani\u003c\/a\u003e created this task.",
+        "transactionID": "7034480",
+        "transactionPHID": "PHID-XACT-TASK-7llfs7ov2l7eidy",
+        "transactionType": "title",
+        "oldValue": "",
+        "newValue": "1.37.0-wmf.17 deployment blockers",
+        "meta": {
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_66\"\u003ethcipriani\u003c\/a\u003e set Release Date to Sun, Aug 1, 19:00.",
+        "transactionID": "7034479",
+        "transactionPHID": "PHID-XACT-TASK-5olrazvn62kfom7",
+        "transactionType": "core:customfield",
+        "oldValue": null,
+        "newValue": 1627862400,
+        "meta": {
+          "customfield:key": "std:maniphest:release.date",
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_67\"\u003ethcipriani\u003c\/a\u003e set Release Version to 1.37.0-wmf.17.",
+        "transactionID": "7034478",
+        "transactionPHID": "PHID-XACT-TASK-kqdqcwkbkrj4tlc",
+        "transactionType": "core:customfield",
+        "oldValue": null,
+        "newValue": "1.37.0-wmf.17",
+        "meta": {
+          "customfield:key": "std:maniphest:release.version",
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_68\"\u003ethcipriani\u003c\/a\u003e changed the subtype of this task from \"Task\" to \"Release\".",
+        "transactionID": "7034477",
+        "transactionPHID": "PHID-XACT-TASK-oouwoaxvkwfxnop",
+        "transactionType": "core:subtype",
+        "oldValue": "default",
+        "newValue": "release",
+        "meta": {
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_69\"\u003ethcipriani\u003c\/a\u003e added projects: \u003ca href=\"\/tag\/train_deployments\/\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_70\"\u003eTrain Deployments\u003c\/a\u003e, \u003ca href=\"\/tag\/release\/\" class=\"phui-handle\" data-sigil=\"hovercard\" data-meta=\"0_71\"\u003eRelease\u003c\/a\u003e.",
+        "transactionID": "7034476",
+        "transactionPHID": "PHID-XACT-TASK-g4vqkofmue3vj3k",
+        "transactionType": "core:edge",
+        "oldValue": [],
+        "newValue": [
+          "PHID-PROJ-fmcvjrkfvvzz3gxavs3a",
+          "PHID-PROJ-pf35un2jsnsiriivnmeo"
+        ],
+        "meta": {
+          "edge:type": 41,
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      },
+      {
+        "taskID": "281158",
+        "action": "Updated",
+        "title": "\u003ca href=\"\/p\/thcipriani\/\" class=\"phui-handle phui-link-person\" data-sigil=\"hovercard\" data-meta=\"0_72\"\u003ethcipriani\u003c\/a\u003e created this task.",
+        "transactionID": "7034475",
+        "transactionPHID": "PHID-XACT-TASK-6fj6ad3b5i4lnuk",
+        "transactionType": "core:create",
+        "oldValue": null,
+        "newValue": null,
+        "meta": {
+          "core.create": true,
+          "core.groupID": "snwlfcoo6w553llpo3ubbr3co7gy6o7c"
+        },
+        "comments": null,
+        "authorPHID": "PHID-USER-5ewyncd6mpezaymyxfal",
+        "dateCreated": "1619450104"
+      }
+    ]
+  },
+  "error_code": null,
+  "error_info": null
+}
