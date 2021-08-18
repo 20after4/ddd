@@ -76,7 +76,9 @@ class Status(Enum):
         return self.value
 
 
-def isPHID(value: Union[str, PHID]) -> bool:
+def isPHID(value) -> bool:
+    if isinstance(value, PHIDRef):
+        return True
     if not isinstance(value, (PHID, str)):
         return False
     return value.startswith("PHID-")
@@ -352,9 +354,16 @@ class PHIDRef(object):
     def __eq__(self, other) -> bool:
         return (
             other is self.object
-            or (isinstance(other, PHIDRef) and other.object is self.object)
-            or (isinstance(other, str) and isPHID(other) and other == self.toPHID)
+            or (
+                isinstance(other, PHIDRef)
+                and other.toPHID == self.toPHID
+                and other.fromPHID == self.fromPHID
+            )
+            or (isPHID(other) and other == self.toPHID)
         )
+
+    def __hash__(self):
+        return hash((self.toPHID, self.fromPHID))
 
     def __conform__(self, protocol):
         if protocol is sqlite3.PrepareProtocol:

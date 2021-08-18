@@ -379,14 +379,43 @@ def main(project, mock, db, dump, table, cache_columns):
 
         con.executescript(
             f"""
+            --sql
             CREATE TABLE IF NOT EXISTS column_metrics (trnsid, ts, project phid, column phid, task, type, value);
+            --sql
             CREATE TABLE IF NOT EXISTS columns({column_names});
+            --sql
             CREATE INDEX IF NOT EXISTS ts_column_value on column_metrics(column, task, ts, value);
+            --sql
             CREATE UNIQUE INDEX IF NOT EXISTS trnsid on column_metrics(ts, column, task, value);
+            --sql
             CREATE TABLE IF NOT EXISTS task_metrics(task, metric phid, next_metric phid, ts, ts2, duration);
+            --sql
             CREATE UNIQUE INDEX IF NOT EXISTS task_metric ON task_metrics(task, metric);
+            --sql
             CREATE TABLE IF NOT EXISTS events(ts, task, project phid, user phid, event, old, new);
+            --sql
             CREATE UNIQUE INDEX IF NOT EXISTS events_pk on events(ts, task, event);
+            --sql
+            CREATE VIEW IF NOT EXISTS
+                view_column_metrics AS
+            SELECT
+                c.ts AS ts,
+                p.name AS column_name,
+                sum(c.value) OVER w AS task_count,
+                printf('T%u',c.task) AS task,
+                c.project AS project_phid,
+                c.column AS column_phid,
+                group_concat(
+                    printf('T%u',c.task),
+                    " "
+                ) FILTER(WHERE c.value > 0) OVER w AS tasks
+            FROM column_metrics c, phobjects p
+            WHERE
+                c.type = 'columns'
+            AND c.column=p.phid
+            WINDOW w AS ( PARTITION BY c.column ORDER BY c.ts, -c.value)
+            ORDER BY
+                c.column, c.ts;
         """
         )
 
