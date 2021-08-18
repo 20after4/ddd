@@ -21,10 +21,63 @@ let alone completely implemented. Stay tuned or get involved.
 
 # Usage
 
-The most useful bits of code that can be found in this repo are demonstrated
-with the following code examples:
+## boardmetrics.py
 
-# Example:
+This tool is used to extract data from phabricator and organize it in a structure that will facilitate further analysis.
+The analysis of task activities can provide some insight into workflows.
+The output if this tool will be used as the data source for charts to visualize certain agile project planning metrics.
+
+Example usage (this is rough and can be simplified with a bit more refinement.)
+
+From the project directory:
+```bash
+./ddd/boardmetrics.py --project=PHID-PROJ-fmcvjrkfvvzz3gxavs3a --mock=test/train.transactions.json --dump=json > metrics.json
+```
+
+This calculates data for the given project PHID, using data from a mock api call result (to speed up testing) and dumps the output as json.
+
+If you omit the --mock argument then it will request a rather large amount of data from the phabricator API which takes an extra 20+ seconds to fetch.
+
+
+# Example code:
+
+## PHIDRef
+
+Whenever encountering a phabricator `phid`, we use PHIDRef objects to wrap the phid. This provides several conveniences
+for working with phabricator objects efficiently.  This interactive python session demonstrates how it works:
+
+```python
+In [1]: phid = PHIDRef('PHID-PROJ-uier7rukzszoewbhj7ja')
+# PHIDRef has a placeholder for the Project instance:
+IN [2]: phid.object
+Out[2]: Project(name="", phid="PHID-PROJ-uier7rukzszoewbhj7ja")
+
+# Once we call resolve_phids, then the data is filled in from cache or from a conduit request if it's not cached:
+In [3]: PHObject.resolve_phids(phab, DataCache(db))
+Out[3]: {'PHID-PROJ-uier7rukzszoewbhj7ja': Project(name="Releas...ewbhj7ja")}
+
+# now phid and phid.object are useful:
+In [4]: phid.object
+Out[4]: Project(name="Release-Engineering-Team", phid="PHID-PROJ-uier7rukzszoewbhj7ja")
+
+In [5]: phid
+Out[5]: PHIDRef('PHID-PROJ-uier7rukzszoewbhj7ja', object='Release-Engineering-Team')
+
+In [6]: str(phid.object)
+Out[6]: Release-Engineering-Team
+
+In [7]: str(phid)
+Out[7]: PHID-PROJ-uier7rukzszoewbhj7ja
+
+```
+
+1. You can construct a bunch of PHIDRef instances and then later on you can fetch all of the data in a single call to `resolve_phids()`.
+2. resolve_phids can store a local cache of the phid details in the phobjects table.
+3. a PHIDRef can be used transparently as a database key.
+ * `str(PHIDRef_instance)` returns the original `"PHID-TYPE-hash"` string.
+ * `PHIDRef_instance.object` returns an instantiated `PHObject` instance.
+ * After calling `resolve_phids()`, all `PHObject` instances will contain the `name`, `url` and `status` of the corresponding phabricator objects.
+
 
 ```python
 from ddd.phab import Conduit

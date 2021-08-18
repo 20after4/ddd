@@ -10,32 +10,33 @@ from typing import Optional, Union
 
 
 class PropertyMatcher(object):
-    """ Usage example:
+    """Usage example:
 
-        def process_transactions(transactions):
-            mapper = PropertyMatcher()
+    def process_transactions(transactions):
+        mapper = PropertyMatcher()
 
-            @mapper("transactionType=core:edge", "meta.edge:type=41")
-            def edge(t):
-                ''' match project edge transactions '''
-                oldValue = [PHIDRef(p) for p in t["oldValue"]]
-                newValue = [PHIDRef(p) for p in t["newValue"]]
-                return [["projects", '', oldValue, newValue]]
+        @mapper("transactionType=core:edge", "meta.edge:type=41")
+        def edge(t):
+            ''' match project edge transactions '''
+            oldValue = [PHIDRef(p) for p in t["oldValue"]]
+            newValue = [PHIDRef(p) for p in t["newValue"]]
+            return [["projects", '', oldValue, newValue]]
 
-            for taskid, t in transactions.result.items():
-                st = sorted(t, key=itemgetter("dateCreated"))
-                for record in st:
-                    for row in mapper.run(record):
-                        if row:
-                            yield row
+        for taskid, t in transactions.result.items():
+            st = sorted(t, key=itemgetter("dateCreated"))
+            for record in st:
+                for row in mapper.run(record):
+                    if row:
+                        yield row
 
 
-        transactions = get_some_transactions()
+    transactions = get_some_transactions()
 
-        for row in process_transactions(transactions):
-            # do something with row
+    for row in process_transactions(transactions):
+        # do something with row
 
     """
+
     def __init__(self):
         self.matchers = []
         self.patterns = []
@@ -54,11 +55,12 @@ class PropertyMatcher(object):
             self.patterns = []
             for arg in args:
                 pat, val = arg.split("=")
-                pattern = (pat.split('.'), val)
+                pattern = (pat.split("."), val)
                 self.patterns.append(pattern)
 
         def wrapper(func):
             patterns = self.patterns
+
             def matcher(obj):
                 orig = obj
                 matched = False
@@ -68,8 +70,11 @@ class PropertyMatcher(object):
                         pattern, val = pattern
                         obj = orig
                         for item in pattern:
+                            if item == "*":
+                                matched = True
+                                break
                             obj = obj[item]
-                        if obj == val:
+                        if str(val) == str(obj) or (val == "*" and obj):
                             matched = True
                     except Exception:
                         matched = False
@@ -77,8 +82,10 @@ class PropertyMatcher(object):
                         return False
                 if matched:
                     return func(orig)
+
             self.matchers.append(matcher)
             return matcher
+
         return wrapper
 
 
@@ -89,7 +96,7 @@ class DataIterator(Iterator):
 
     data: Iterator
 
-    def __init__(self, data:Iterable, parent=None):
+    def __init__(self, data: Iterable, parent=None):
         self.data = data.__iter__()
         self.parent = parent
 
@@ -134,7 +141,9 @@ class Data(MutableMapping):
 
     def siblings(self):
         """Iterate over the children of this element's parent data structure"""
-        return iter(self._parent)
+        if self._parent:
+            return iter(self._parent)
+        return iter([])
 
     def __getattr__(self, attr):
         return self.__getitem__(attr)
