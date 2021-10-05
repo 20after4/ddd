@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% set train = train(version) %}
+
+{% block extra_head %}
+<style>
+    ul {
+        list-style-type: disc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+<div style='padding:30px;margin:10px;border:1px dotted #333' contenteditable='true'>
+    This email is a summary of the Wikimedia production deployment of {{version}}
+<ul>
+    <li>Train Conductors: {{PHObject(train['conductor'])}}, {{PHObject(train['backup_conductor'])}}</li>
+    <li>Phabricator Task: <a href="https://phabricator.wikimedia.org/{{['task']}}">{{train['task']}}</a></li>
+    <li>Deployment Status: <a href="https://versions.toolforge.org/">Live on all wikis</a> </li>
+</ul>
+
+<h2>Stats</h2>
+<ul>
+    {% set blockers, blockers_closed, _ = train['subtask'] %}
+    <li>{{train['patches']}} patches</li>
+    <li>{{train['rollbacks']}} rollbacks</li>
+    <li>{{delays}} delays</li>
+    <li>{{blockers}} blockers ({{blockers - blockers_closed}} remain open)</li>
+    <li>{{train['mention'][0]}} tasks mentioned</li>
+</ul>
+
+<h2>🚂🌈</h2>
+Thanks to everyone¹ who helped out with this train. Here are some names chosen at random:
+<ul>
+    {% for key in train['participants'].keys() %}
+        <li>{{PHObject(key)}}</li>
+    {% endfor %}
+
+</ul>
+<hr>
+<p>
+<em>¹ yes, even the bots</em>
+</p>
+<p>
+- Be sure to tune in next time for another exciting train<strike>wreck</strike>.
+</p>
+</div>
+{% endblock %}

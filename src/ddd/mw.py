@@ -12,7 +12,6 @@ class MWVersion(VersionInfo):
             version = kwds["version"]
         else:
             return super().__init__(*args, **kwds)
-        print(*args, **kwds)
         info = self.parse(version).to_dict()
         super().__init__(**info)
 

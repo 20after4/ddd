@@ -1,0 +1,13 @@
+[Unit]
+Description=srv 0.1: Service's description
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/ddd
+ExecStart=run-datasette.sh
+User=ddd
+Group=srv
+
+[Install]
+WantedBy=multi-user.target

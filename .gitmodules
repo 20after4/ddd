@@ -1,0 +1,3 @@
+[submodule "src/datasette-dashboards"]
+	path = src/datasette-dashboards
+	url = https://gitlab.wikimedia.org/20after4/datasette-dashboards.git

@@ -1,0 +1,12 @@
+a.phid {
+    /*
+    display: inline-block;
+    position:relative;
+    height: auto;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;*/
+    font-size: 85%;
+    font-family: monospace;
+    white-space: nowrap;
+}

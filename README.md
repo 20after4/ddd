@@ -21,7 +21,20 @@ let alone completely implemented. Stay tuned or get involved.
 
 # Usage
 
-## boardmetrics.py
+## cli
+
+setup.py will install a command line tool called `dddcli`
+
+To install for development use:
+
+```bash
+python3 setup.py develop
+```
+
+
+You can use the following sub-commands with `dddcli command [args]` to access various functionality.
+
+### phabricator metrics
 
 This tool is used to extract data from phabricator and organize it in a structure that will facilitate further analysis.
 The analysis of task activities can provide some insight into workflows.
@@ -29,15 +42,47 @@ The output if this tool will be used as the data source for charts to visualize 
 
 Example usage (this is rough and can be simplified with a bit more refinement.)
 
-From the project directory:
+The first thing to do is cache the columns for the project you're interested in.
+This will speed up future actions because it avoids a lot of unnecessary requests
+to Phabricator that would otherwise be required to resolve the names of projects
+and workboard columns.
+
 ```bash
-./ddd/boardmetrics.py --project=PHID-PROJ-fmcvjrkfvvzz3gxavs3a --mock=test/train.transactions.json --dump=json > metrics.json
+dddcli metrics cache-columns --project=PHID-PROJ-uier7rukzszoewbhj7ja
 ```
 
-This calculates data for the given project PHID, using data from a mock api call result (to speed up testing) and dumps the output as json.
+Then you can fetch the actual metrics and map them into local sqlite tables:
+
+
+```bash
+dddcli metrics map --project=PHID-PROJ-uier7rukzszoewbhj7ja
+```
+
+To get cli usage help, try
+
+```bash
+dddcli metrics map --help
+```
+
+To run it with a test file instead of connecting to phabricator:
+
+```bash
+dddcli metrics map --mock=test/train.transactions.json
+```
+
+This runs the mapper with data from a file, treating that as a mock api call result (to speed up testing)
 
 If you omit the --mock argument then it will request a rather large amount of data from the phabricator API which takes an extra 20+ seconds to fetch.
 
+### datasette
+
+To run datasette, from the ddd checkout:
+
+```bash
+dddcli serve ./www
+```
+Sample systemd units are in `etc/systemd/*` including a file watcher to restart datasette
+when the data changes.
 
 # Example code:
 
@@ -71,12 +116,14 @@ Out[7]: PHID-PROJ-uier7rukzszoewbhj7ja
 
 ```
 
-1. You can construct a bunch of PHIDRef instances and then later on you can fetch all of the data in a single call to `resolve_phids()`.
+1. You can construct a bunch of PHIDRef instances and then later on you can fetch all of
+   the data in a single call to `resolve_phids()`.
 2. resolve_phids can store a local cache of the phid details in the phobjects table.
 3. a PHIDRef can be used transparently as a database key.
  * `str(PHIDRef_instance)` returns the original `"PHID-TYPE-hash"` string.
  * `PHIDRef_instance.object` returns an instantiated `PHObject` instance.
- * After calling `resolve_phids()`, all `PHObject` instances will contain the `name`, `url` and `status` of the corresponding phabricator objects.
+ * After calling `resolve_phids()`, all `PHObject` instances will contain the `name`,
+   `url` and `status` of the corresponding phabricator objects.
 
 
 ```python

@@ -1,0 +1,8 @@
+[Path]
+Unit=ddd-watcher.service
+PathChanged=/srv/www 
+# trigger on changes to a file not just create/delete
+# don't put comments in the same line as the command
+
+[Install]
+WantedBy=multi-user.target

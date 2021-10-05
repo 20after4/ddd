@@ -1,7 +1,8 @@
 from __future__ import annotations
-from collections import Callable
+from collections import deque
 from collections import UserDict
 from collections import UserList
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import MutableMapping
 from collections.abc import MutableSequence
@@ -37,16 +38,44 @@ class PropertyMatcher(object):
 
     """
 
-    def __init__(self):
+    def __init__(self, context: MutableMapping = None):
         self.matchers = []
         self.patterns = []
+        self.context_stack = deque()
+        self.context = context if context else {}
 
-    def run(self, obj):
+    def get_context(self, context=None):
+        if context is None:
+            return self.context
+        return context
+
+    def new_context(self, context=None):
+        if context is None:
+            context = {}
+        self.context_stack.append(self.context)
+        self.context = context
+        return context
+
+    def run(self, obj, context=None):
+        matches = []
+        context = self.get_context(context)
+
         for matcher in self.matchers:
-            res = matcher(obj)
+            res = matcher(obj, context)
             if res:
-                for row in res:
-                    yield row
+                matches += res
+
+        return matches
+
+    def run_async(self, obj, context=None):
+        context = self.get_context(context)
+
+        for matcher in self.matchers:
+            res = matcher(obj, context)
+            if not res:
+                continue
+            for row in res:
+                yield row
 
     def __call__(self, *args):
         if len(args) == 1 and isinstance(args[0], Callable):
@@ -54,14 +83,15 @@ class PropertyMatcher(object):
         else:
             self.patterns = []
             for arg in args:
-                pat, val = arg.split("=")
+                arg = str(arg)
+                pat, val = arg.split("=", 1)
                 pattern = (pat.split("."), val)
                 self.patterns.append(pattern)
 
         def wrapper(func):
             patterns = self.patterns
 
-            def matcher(obj):
+            def matcher(obj, context):
                 orig = obj
                 matched = False
                 for pattern in patterns:
@@ -81,7 +111,7 @@ class PropertyMatcher(object):
                     if not matched:
                         return False
                 if matched:
-                    return func(orig)
+                    return func(orig, context)
 
             self.matchers.append(matcher)
             return matcher

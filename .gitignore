@@ -7,4 +7,10 @@ __pycache__
 .vscode
 cache.db
 *.egg-info
+/.eggs
 /dist
+*.db
+/.venv/*
+/test/*.json
+/ddd.code-workspace
+/ignore/*

@@ -1,0 +1,339 @@
+title: Datasette Data³ Demo
+about: Data³
+about_url: https://www.mediawiki.org/wiki/Data%C2%B3
+description_html: |-
+  Try it out at <a href="/-/dashboards">/-/dashboards</a>
+plugins:
+  datasette-dashboards:
+    project-metrics:
+      title: Data³ - workflow metrics
+      description: Metrics about projects, tasks and workflows
+      layout:
+      - [ custom-chart-display, custom-chart-display]
+      - [project-events, column-metrics]
+      - [project-tasks-state, project-tasks-state]
+      - [task-states,task-states ]
+      filters:
+        project:
+          name: Project
+          type: select
+          query: select phid as key, name as label from Project
+        task:
+          name: Task ID
+          type: text
+        date_start:
+          name: Date Start
+          type: date
+          default: '2021-01-01'
+        date_end:
+          name: Date End
+          type: date
+      charts:
+        custom-chart-display:
+          title: test custom chart
+          db: metrics
+          query: projects_and_subprojects
+          library: custom
+          display: test 1 2 3
+        project-events:
+          title: Number of tasks in the project weekly
+          db: metrics
+          query:
+            select * from (SELECT
+                 case state when 'untagged' then -count(distinct task) else count(distinct task) end AS value,
+                 state,
+                 metric, p.name as project_name,
+                 date(ts, 'unixepoch', 'weekday 1') as week,
+                 sum(duration) as duration
+            FROM
+                task_metrics m
+            JOIN
+                Project p
+            ON m.metric=p.phid
+            GROUP BY metric, week, state
+            ORDER BY week)
+            WHERE
+               [[ metric in (:project) ]]
+               [[ AND week >= date(:date_start) ]]
+               [[ AND week <= date(:date_end) ]];
+          library: vega
+          display:
+            width: 500
+            height: 300
+            transform: [
+              {
+                stack: value,
+                as: ["s1", "s2"],
+                offset: zero,
+                groupby: ["week"]
+              },
+              {
+                joinaggregate: [{
+                  op: sum,
+                  field: value,
+                  as: sum1
+                }],
+                groupby: ["week"]
+              }
+            ]
+            encoding: {
+              x: { field: week, type: temporal },
+            }
+            layer: [
+              {
+                encoding: {
+                  y: {
+                    field: value,
+                    type: quantitative,
+                    axis: {"grid": true }
+                    # scale: {
+                    #   domainMin: 0
+                    # }
+                  },
+                  color: { field: state, type: ordinal }
+                  # y2: {
+                  #   field: s2,
+                  #   type: quantitative,
+                  # },
+                  # color: {
+                  #   field: state,
+                  #   type: nominal,
+                  # }
+                },
+                mark: {
+                  type: area,
+                  clip: true,
+                  interpolate: monotone,
+                  tooltip: true,
+                  opacity: 0.8,
+                  line: {
+                    color: "darkblue"
+                  },
+                  color: {
+                    x1: 1,
+                    y1: 1,
+                    x2: 1,
+                    y2: 0,
+                    gradient: linear,
+                    stops: [
+                      { offset: 0, color: "black", opacity: 0.5 },
+                      { offset: 1, color: "blue", opacity: 0.4},
+                    ]
+                  }
+                }
+              },
+              {
+                encoding: {
+                  y: {
+                    field: sum1,
+                    type: quantitative,
+                    title: "Tagged + untagged"
+                    #title: "sum of tagged and untagged"
+                  },
+                  # color: {
+                  #   field: sum1, type: quantitative,
+                  # }
+                },
+                mark: {
+                  type: bar,
+                  strokeWidth: 1,
+                  stroke: "black",
+                  # clip: true,
+                  tooltip: true,
+                  opacity: 0.9,
+                  width: {band: 1},
+                  binSpacing: 0,
+                  fillColor: {
+                    x1: 1,
+                    y1: 1,
+                    x2: 1,
+                    y2: 0,
+                    gradient: linear,
+                    stops: [
+                      { offset: 1, color: "white", opacity: 0.4},
+                      { offset: 0, color: "darkblue",  opacity: 0.7},
+                    ]
+                  }
+                }
+              }
+            ]
+            resolve: {"scale": {"y": "independent"}}
+        column-metrics:
+          title: Tasks per column
+          db: metrics
+          query:
+            select
+              *
+            from
+              (
+                SELECT
+                  printf('T%u', c.task) AS task,
+                  c.ts AS ts,
+                  date(c.ts, 'unixepoch', 'start of month') as month,
+                  date(
+                    c.ts,
+                    'unixepoch',
+                    'weekday 1',
+                    'start of day',
+                    '-7 days'
+                  ) as week,
+                  p.column_phid as column_phid,
+                  p.column_name AS column_name,
+                  p.project_phid as project_phid,
+                  p.project_name as project_name,
+                  p.project_name||':'||p.column_name AS qualified_name,
+                  p.status as column_hidden,
+                  c.value as value,
+                  sum(c.value) over (partition by column_phid order by ts RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as total_tasks
+                FROM
+                  column_metrics c
+                  join columns p on c.column = p.column_phid
+              )
+            where
+              column_hidden = 0
+              [[ AND project_phid=:project ]]
+              [[ AND week >= date(:date_start) ]]
+              [[ AND week <= date(:date_end) ]]
+          library: vega
+          display:
+            transform: [
+              stack: value, as: ["s1", "s2"], offset: zero, groupby: ["project_phid", "column_phid"]
+            ]
+            # {
+            #   window: [{
+            #     op: sum,
+            #     field: value,
+            #     as: running_total
+            #   }],
+            #   frame: [null, 0],
+            #   groupby: ["project_phid", "column_phid", "week"],
+            #   sort: [{ field: qualified_name }]
+            # }]
+            mark: { type: bar, tooltip: true, width: { band: 1 }}
+            encoding:
+              column: { field: week, type: temporal }
+              y: { field: s1, type: quantitative}
+              y2: { field: s2, type: quantitative}
+              y3: { field: total_tasks, type: quantitative }
+              row: { field: project_name, type: ordinal }
+              x: { field: column_name, type: ordinal }
+              color: { field: column_name, type: nominal, scale: {scheme: "category20b"} }
+        task-states:
+          title: Task Details
+          db: metrics
+          query:
+            SELECT
+                c.project_name,
+                c.column_name       AS new_column,
+                d.column_name       AS old_column,
+                date(ts, 'unixepoch', 'start of month') AS month,
+                date(ts, 'unixepoch') AS timestamp,
+                e.task,
+                e.project,
+                e.user,
+                e.event,
+                e.old,
+                e.new,
+                count(*) as count
+            FROM events e
+            left JOIN columns c ON e.new = c.column_phid
+            left JOIN columns d ON e.old = d.column_phid
+            WHERE task=:task
+            group by event, timestamp
+            ORDER BY
+                timestamp;
+          library: vega
+          display:
+            mark: { type: bar, tooltip: true }
+            encoding:
+              y: { field: count, type: quantitative }
+              x: { field: timestamp, type: temporal }
+              color: { field: event, type: ordinal }
+        project-tasks-state:
+          title: Number of tasks in the project weekly
+          db: metrics
+          query:
+            WITH phidtree as (
+              SELECT
+                phid
+              FROM
+                Project
+              WHERE
+                :project IN (phid, parent)
+            )
+            SELECT
+              task,
+              state,
+              metric,
+              p.name,
+              w.date as week,
+              count(distinct task) as count
+            FROM
+              task_metrics t
+              left join project p on p.phid=t.metric
+              left join weeks w on w.date >= date(t.ts, 'unixepoch')
+              and w.date <= date(t.ts2, 'unixepoch')
+            WHERE
+              metric IN (
+                SELECT
+                  *
+                FROM
+                  phidtree
+              )
+              [[ AND week >= date(:date_start) ]]
+              [[ AND week <= date(:date_end) ]]
+            GROUP BY
+            task,metric, week
+            ORDER BY
+              week
+          library: vega
+          display:
+            mark: { type: area, tooltip: true }
+            encoding:
+              x: { field: week, type: ordinal }
+              y: { field: count, type: quantitative }
+              color: { field: name, scale: { scheme: 'category20' }}
+
+
+databases:
+  metrics:
+    queries:
+      column_events:
+        title: Column movement events.
+        sql: |-
+          "select c.project_name, c.column_name as new_column, d.column_name as old_column, count(task) as count, date(ts, 'unixepoch', 'start of month') as month, datetime(ts, 'unixepoch') as timestamp, task, project, user, event, old, new from events e join columns c on e.new = c.column_phid join columns d on e.old=d.column_phid where event = 'columns' group by old, new, month order by count desc limit 50"
+      project_events:
+        title: project events
+        sql: |-
+            SELECT
+            date(ts, 'unixepoch', 'start of month') as month,
+            count(distinct task) as tasks,
+            count(distinct user) as people,
+            count(distinct old) as sources,
+            new as column
+            FROM events
+            WHERE event in ('columns', 'projects') and project=:project
+            GROUP BY month,column ORDER BY month
+      columns_rollup:
+        title: aggregations by column and month
+        sql: |-
+          SELECT
+          date(ts, 'unixepoch', 'start of month') as month,
+
+          count(distinct user) as people,
+          count(distinct old) as source_count,
+          count(*) as rows,
+          group_concat(task, ', ') as tasks,
+          group_concat(user, ', ') as users,
+          group_concat(old, ', ') as sources,
+          group_concat(new, ', ') as destinations,
+          group_concat(datetime(ts, 'unixepoch'), ', ') as times
+          FROM events
+
+          WHERE event in ('columns', 'projects') and :project in (project, old, new)
+          GROUP BY month
+
+          order by ts
+
+extra_css_urls:
+  - /static/styles.css

@@ -2,31 +2,22 @@ from __future__ import annotations
 
 import json
 import os
-from collections import UserDict, UserList, deque
-from collections.abc import (
-    Iterable,
-    Collection,
-    Mapping,
-    MutableMapping,
-    MutableSequence,
-)
-from pprint import pprint
-from tokenize import Number
-from typing import Sequence, Union
-from operator import itemgetter
+from collections import deque
+from collections.abc import Iterable, MutableMapping
+from typing import Optional, Sequence
 
-# todo: remove dependency on requests
 import requests
+from rich.status import Status
 
-from ddd.data import Data, DataIterator, wrapitem
-from ddd.phobjects import PHID, PHObject, PhabObjectBase, isPHID, json_object_hook
+from ddd.data import Data, DataIterator
+from ddd.phobjects import PHID, json_object_hook
 
 
 class Cursor(object):
     args: MutableMapping
     cursor: MutableMapping
     conduit: Conduit
-    data: deque[Data]
+    data: deque
     result: MutableMapping
     method: str
 
@@ -52,9 +43,13 @@ class Cursor(object):
     def has_more(self):
         return self.cursor.get("after", None)
 
-    def fetch_all(self):
+    def fetch_all(self, status: Optional[Status] = None):
         """Sequentially Fetch all pages of results from the server."""
+        page = 0
         while self.has_more():
+            page += 1
+            if status and page % 10 == 0:
+                status.update(f"Fetching page [bold green]{page}[/bold green]")
             self.next_page()
         return self.data
 
@@ -138,6 +133,14 @@ class Conduit(object):
         """Find projects"""
         return self.request(
             "project.search", {"queryKey": queryKey, "constraints": constraints}
+        )
+
+    def maniphest_search(
+        self, constraints: MutableMapping = {}
+    ) -> Cursor:
+        """Find projects"""
+        return self.request(
+            "maniphest.search", {"constraints": constraints}
         )
 
     def project_columns(

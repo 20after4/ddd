@@ -1,6 +1,45 @@
-[build-system]
-requires = [
-  "setuptools >= 40.9.0",
-  "wheel",
+[tool.poetry]
+name = 'ddd'
+version = '0.1.0'
+authors = ["Mukunda Modell <mmodell@wikimedia.org>"]
+description = "ddd or d³ is a toolkit for accessing APIs and processing data from disperate systems."
+readme = "README.md"
+
+packages = [
+    { include = "ddd", from="src" },
 ]
-build-backend = "setuptools.build_meta"
+
+[tool.poetry.dependencies]
+python = '^3.7'
+typer = {extras = ["all"], version = "^0.3.2"}
+datasette = "^0.58.1"
+datasette-dashboards = { path = "src/datasette-dashboards", develop = true }
+click = "<7.2"
+semver = "^2.13.0"
+requests = "^2.26.0"
+sqlite-utils = "^3.17"
+rich = "^10.11.0"
+
+
+[tool.poetry.dev-dependencies]
+black = "^21.9b0"
+pytest = "^6.2.5"
+
+[tool.poetry.scripts]
+boardmetrics = "ddd.boardmetrics:main"
+trainblockers = "ddd.trainblockers:main"
+conduit = "ddd.conduit_cli:cli"
+dddcli = "ddd.main:cli"
+
+[build-system]
+requires = ["poetry>=1.1.8"]
+build-backend = "poetry.masonry.api"
+
+[project.scripts]
+boardmetrics = "ddd.boardmetrics:main"
+trainblockers = "ddd.trainblockers:main"
+conduit = "ddd.conduit_cli:cli"
+dddcli = "ddd.main:cli"
+
+[tool.pyright]
+reportMissingTypeStubs = true

@@ -1,0 +1,15 @@
+[Unit]
+# adapted from https://superuser.com/a/1531261/552615
+
+Description=ddd restarter
+After=network.target
+StartLimitIntervalSec=10
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart ddd-datasette.service
+
+[Install]
+WantedBy=multi-user.target
+
