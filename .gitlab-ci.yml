@@ -40,7 +40,10 @@ unit-test-job:   # This job runs in the test stage.
   script:
     - python3 -V  # Print out python version for debugging
     - pip3 install virtualenv
-    - virtualenv --python=python3 venv
+    - if [ ! -d "./venv" ] 
+    - then
+    -   virtualenv --python=python3 venv
+    - fi
     - source venv/bin/activate
     - git submodule update --init --recursive
     - pip3 install poetry pytest
