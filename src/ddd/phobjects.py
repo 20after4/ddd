@@ -29,7 +29,7 @@ from typing import (
 )
 
 from rich.console import Console
-from sqlite_utils.db import Database,Table
+from sqlite_utils.db import Database, NotFoundError, Table
 
 console = Console()
 
@@ -50,9 +50,12 @@ console = Console()
 
  """
 
+
 class EmptyArg:
     """Sentinal Value"""
+
     pass
+
 
 class PHIDError(ValueError):
     def __init__(self, msg):
@@ -164,7 +167,10 @@ def PHIDType(phid: PHID) -> Type[PHObject]:
     """Find the class for a given PHID string. Returns a reference to the
     matching subclass or to PHObject when there is no match."""
     try:
-        parts = phid.split("-")
+        if isinstance(phid, PHIDRef):
+            parts = phid.toPHID.split("-")
+        else:
+            parts = phid.split("-")
         phidtype = parts[1]
         if phidtype in PHIDTypes.__members__:
             classtype = PHIDTypes[phidtype].value
@@ -258,6 +264,7 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
     This class handles caching and insures that there is at most one instance
     per unique phid.
     """
+
     _type_name = None
 
     @classmethod
@@ -268,6 +275,7 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             return cls.__name__
 
     db: ClassVar[Database]
+    conduit: ClassVar[Conduit]
     table: ClassVar[Table]
     savequeue: ClassVar[deque] = deque()
 
@@ -314,19 +322,23 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             table.upsert(record, alter=True)
 
     def load(self):
-        table = self.get_table()
-        data = table.get(self.phid)
-        self.update(data)
+        try:
+            table = self.get_table()
+            data = table.get(self.phid)
+            self.update(data)
+        except NotFoundError as e:
+            console.log(e)
+
         return self
 
     @property
-    def loaded(self):
+    def loaded(self) -> bool:
         return len(self.__dict__.keys()) > 1
 
     @classmethod
     def instance(
         cls, phid: PHID, data: Optional[Mapping] = None, save: bool = False
-    ) -> PhabObjectBase:
+    ) -> PHObject:
         obj = __class__.byid(phid)
         if not obj:
             phidtype = PHIDType(phid)
@@ -338,10 +350,10 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             obj.update(data)
             if save:
                 obj.save()
-        return obj
+        return obj #type:ignore
 
     @classmethod
-    def resolve_phids(cls, conduit, cache: Optional[DataCache] = None):
+    def resolve_phids(cls, conduit: Optional[Conduit] = None, cache: Optional[DataCache] = None):
         phids = {phid: True for phid in __class__.instances.keys()}
 
         if cache:
@@ -353,6 +365,8 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             # no more phids to resolve.
             return cls.instances
         phids = [phid for phid in phids.keys()]
+        if not conduit:
+            conduit = PHObject.conduit
         res = conduit.raw_request(method="phid.query", args={"phids": phids})
 
         objs = res.json()
@@ -466,7 +480,7 @@ class TimeSpanMetric:
     @task.setter
     def task(self, val):
         if isinstance(val, str):
-            val = int(val[1:]) if val[0] == 'T' else int(val)
+            val = int(val[1:]) if val[0] == "T" else int(val)
         self._task = val
 
     def __repr__(self) -> str:
@@ -475,7 +489,7 @@ class TimeSpanMetric:
 
 class MetricsMixin:
     _metrics: defaultdict[Any, TimeSpanMetric]
-    phid:PHID
+    phid: PHID
 
     def metrics(self, is_started=True, is_ended=True):
         """Retrieve metrics, optionally filtered by their state"""
@@ -492,10 +506,10 @@ class MetricsMixin:
             if m.last is not None:
                 m.end(ts, state)
 
-    def metric(self, metric:TimeSpanMetric=None, **kwds) -> TimeSpanMetric:
+    def metric(self, metric: TimeSpanMetric = None, **kwds) -> TimeSpanMetric:
         """Create a metric instance for a given task+project pair"""
-        if "key" in kwds and kwds['key'] is not None:
-            key = kwds['key']
+        if "key" in kwds and kwds["key"] is not None:
+            key = kwds["key"]
         else:
             key = self.phid
 
@@ -551,7 +565,7 @@ class Project(PHObjectWithFields, MetricsMixin):
 
 
 class ProjectColumn(PHObjectWithFields):
-    _type_name = 'Column'
+    _type_name = "Column"
 
     derive_columns = DerivedTable(
         "columns",
@@ -569,12 +583,13 @@ class ProjectColumn(PHObjectWithFields):
 
 
 class Task(PHObjectWithFields, MetricsMixin):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._metrics = defaultdict(TimeSpanMetric)
 
-    def metric(self, key:str, metric: Optional[TimeSpanMetric]=None) -> TimeSpanMetric:
+    def metric(
+        self, key: str, metric: Optional[TimeSpanMetric] = None
+    ) -> TimeSpanMetric:
         return super().metric(key=key, metric=metric, task=self.phid)
 
 
@@ -825,9 +840,9 @@ class PHObjectEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-
 class NotFound:
     """Sentinal value"""
+
     pass
 
 
@@ -906,9 +921,9 @@ class KKVCache(object):
         elif ptype is Project:
             res = self.get_default_column(phid)
 
-        #if res is None:
+        # if res is None:
         #    res = PHIDRef(phid)
-        #console.log(repr(res))
+        # console.log(repr(res))
         return res
 
 
@@ -952,7 +967,7 @@ class DataCache(object):
         sql = f"""{op} INTO {self.table_name} ({", ".join(cols)}) VALUES ({self.placeholders(len(cols))})"""
         return sql
 
-    def __init__(self, db: Database|sqlite3.Connection, create_schema=True):
+    def __init__(self, db: Database | sqlite3.Connection, create_schema=True):
 
         if isinstance(db, Database):
             self.con = db.conn
@@ -1010,6 +1025,7 @@ class DataCache(object):
 
     def store_one(self, item: PHObject):
         self.store_all([item])
+
 
 KKV: KKVCache
 DATA: DataCache

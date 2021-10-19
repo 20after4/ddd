@@ -44,7 +44,9 @@ class Config:
             --sql
             CREATE TABLE IF NOT EXISTS events(ts, task, project phid, user phid, event, old, new);
             --sql
-            CREATE UNIQUE INDEX IF NOT EXISTS events_pk on events(ts, task, event);
+            CREATE UNIQUE INDEX IF NOT EXISTS events_pk on events(ts, task, project, event, old, new);
+            --sql
+            CREATE INDEX IF NOT EXISTS events_project on events(event, project, old, new);
             --sql
             DROP VIEW IF EXISTS view_column_metrics;
             --sql

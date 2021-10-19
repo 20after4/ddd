@@ -1,28 +1,45 @@
 import sqlite3
 from typing import Union
+from ddd.phab import Conduit
 
 
-from ddd.phobjects import PHIDType, isPHID, PHID, register_sqlite_adaptors
-from datasette import hookimpl
+from ddd.phobjects import DataCache, PHIDType, isPHID, PHID, register_sqlite_adaptors, PHObject
+from datasette.hookspecs import hookimpl
 from datasette.app import Datasette
 from datasette.database import Database
 import jinja2
 import json
 
+phab = Conduit()
+cache = None
+
+def phid_lookup(phid):
+    global cache
+    if not isPHID(phid):
+        return phid
+    phob = PHObject.instance(phid)
+    PHObject.resolve_phids(phab)
+    if not phob:
+        return phid
+    typename = phob.typename()
+    return f"{typename}: {phob['name']}" if 'name' in phob else phid
+
 
 @hookimpl
 def prepare_connection(conn: sqlite3.Connection):
+    global cache
     register_sqlite_adaptors()
+    cache = DataCache(db = conn, create_schema=False)
     conn.create_function('phidtype', 1, PHIDType)
     conn.create_function("is_phid", 1, isPHID)
-
+    conn.create_function('phid_lookup', 1, phid_lookup)
 
 def A(href, label, target=None):
     if target:
         target = f' target="{target}"'
-    return jinja2.Markup(
+    return jinja2.utils.Markup(
         '<a class="phid" title="{label}" href="{href}"{target}>{label}</a>'.format(
-            href=jinja2.escape(href), label=jinja2.escape(label or "") or "&nbsp;",
+            href=jinja2.utils.escape(href), label=jinja2.utils.escape(label or "") or "&nbsp;",
             target=target
         )
     )

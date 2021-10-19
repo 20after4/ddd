@@ -55,7 +55,7 @@ def main(
     register_sqlite_adaptors()
     ctx.meta["db"] = Database(db)
     PHObject.db = ctx.meta["db"]
-
+    PHObject.conduit = ctx.meta['conduit']
 
 @app.command()
 def request(
@@ -71,8 +71,8 @@ def request(
     with db.conn:
         for project in cursor.result["data"]:
             project.save()
-            while 'parent' in project and project.parent:
-                project=project.parent
+            while "parent" in project and project.parent:
+                project = project.parent
                 project.save()
     db.conn.commit()
 

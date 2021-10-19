@@ -43,3 +43,6 @@ dddcli = "ddd.main:cli"
 
 [tool.pyright]
 reportMissingTypeStubs = true
+
+[tool.mypy]
+implicit_reexport = true

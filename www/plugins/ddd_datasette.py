@@ -1,12 +1,15 @@
-import ddd
+from pathlib import Path
+
+from ddd import console
 from ddd.phab import Conduit
 import inspect
 from pprint import pprint
 from typing import Dict, NewType, Type, TypeVar
 from ddd.phobjects import PHID, PHIDRef, PHObject
-from datasette import hookimpl
+from datasette.hookspecs import hookimpl
 from importlib import import_module
-from datasette.app import Datasette, Database
+from datasette.app import Datasette
+from datasette.database import Database
 
 Query = NewType('Query', str)
 
@@ -134,10 +137,11 @@ class MetricsQueryList(QueryList, database='metrics'):
             count(distinct task) as tasks,
             count(distinct user) as people,
             count(distinct old) as sources,
+            old as source,
             new as column
         FROM events
         WHERE event in ('columns', 'projects') and project=:project
-        GROUP BY month,column ORDER BY month;
+        GROUP BY month,column,source ORDER BY month;
     """)
 
     projects_and_subprojects = Query(
@@ -185,7 +189,7 @@ def extra_template_vars(datasette: Datasette):
         stats = {"participants": {}}
 
         for idx,key,actor,value in cur.rows:
-            stats['task'] = f'T{idx}'
+            stats['task'] = f'T{idx}' # type: ignore
             if actor == '*':
                 stats[key] = value
             else:
@@ -198,16 +202,12 @@ def extra_template_vars(datasette: Datasette):
                     else:
                         stats['participants'][actor] = int(value)
 
-
-
-
-        # pprint(stats)
         cur = await (
          db.execute(TrainQueryList.train_blockers_joined, {"version": version})
         )
 
         for row in cur.rows:
-            stats[row['metric']] = (row['added'], row['removed'], row['count'])
+            stats[row['metric']] = (row['added'], row['removed'], row['count']) # type: ignore
 
         PHObject.resolve_phids(Conduit())
         pprint(stats)
@@ -215,21 +215,35 @@ def extra_template_vars(datasette: Datasette):
 
     async def instance(phid:PHID):
         if phid[0:2] == '["' and phid[-2:] == '"]':
-            phid = phid[2:-2]
+            phid = phid[2:-2] # type: ignore
         return PHObject.instance(phid)
 
     return {"ddd": ddd, "train": train_stats, "PHObject": instance}
 
 
+def log(err):
+    console.log(err)
+
 @hookimpl
 def canned_queries(datasette: Datasette, database: str):
-    if database in QueryList._querylists:
-        return QueryList._querylists[database]._queries
-    return None
+    sqldir = Path(__file__).parent / "sql" / database
+    if not sqldir.is_dir():
+        return None
+
+    queries = {}
+
+    for f in sqldir.glob('*.sql'):
+        try:
+            sql = f.read_text('utf8').strip()
+            if not len(sql):
+                log(f"Skipping empty canned query file: {f}")
+                continue
+            queries[f.stem] = { "sql": sql }
+        except OSError as err:
+            log(err)
+    return queries
 
 
 @hookimpl
 async def render_custom_dashboard_chart(chart_display):
     return "<h3>test <b>1</b> 2 3</h3>"
-
-

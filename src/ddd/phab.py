@@ -135,13 +135,9 @@ class Conduit(object):
             "project.search", {"queryKey": queryKey, "constraints": constraints}
         )
 
-    def maniphest_search(
-        self, constraints: MutableMapping = {}
-    ) -> Cursor:
+    def maniphest_search(self, constraints: MutableMapping = {}) -> Cursor:
         """Find projects"""
-        return self.request(
-            "maniphest.search", {"constraints": constraints}
-        )
+        return self.request("maniphest.search", {"constraints": constraints})
 
     def project_columns(
         self, project: PHID = None, column_phids: Sequence = None

@@ -15,7 +15,7 @@ import click
 from rich.console import Console
 import typer
 from rich.status import Status
-from sqlite_utils.db import Database,chunks
+from sqlite_utils.db import Database, chunks
 from typer import Option, Typer
 
 from ddd.boardmetrics_mapper import maptransactions
@@ -38,13 +38,13 @@ def cache_tasks(conduit, cache, tasks, sts):
     new_instances = []
     for task in r.data:
         task.save()
-        #instance = PHObject.instance(phid=PHID(key), data=vals, save=True)
-        #new_instances.append(instance)
+        # instance = PHObject.instance(phid=PHID(key), data=vals, save=True)
+        # new_instances.append(instance)
 
-    #cache.store_all(r.data)
+    # cache.store_all(r.data)
 
 
-def cache_projects(conduit:Conduit, cache, sts):
+def cache_projects(conduit: Conduit, cache, sts):
     r = conduit.project_search(constraints={"maxDepth": 2})
 
     r.fetch_all(sts)
@@ -53,6 +53,7 @@ def cache_projects(conduit:Conduit, cache, sts):
         project.save()
 
     cache.store_all(r.data)
+
 
 @cli.command()
 def cache_columns(ctx: typer.Context, project: str = Option("all")):
@@ -80,14 +81,12 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
         for col in r.data:
             count += 1
             col.save()
-            #col.project.save()
-            if round((count/total) * 100) > pct:
-                pct = round((count/total) * 100)
+            # col.project.save()
+            if round((count / total) * 100) > pct:
+                pct = round((count / total) * 100)
                 sts.update(
                     f"Saved [bold green]{count}[/bold green] ([bold blue]{pct}%[/bold blue]) Project Columns."
                 )
-
-
 
     config.console.log(f"Fetched & cached {count} Project Columns.")
     config.db.conn.commit()

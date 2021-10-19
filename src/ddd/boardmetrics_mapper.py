@@ -39,7 +39,7 @@ def maptransactions(
     all_metrics = set()
 
     @mapper("transactionType=core:edge", "meta.edge:type=41")
-    def projects(t, context:Task):
+    def projects(t, context: Task):
         """
         edge transactions point to related objects such as subtasks,
         mentioned tasks and project tags.
@@ -98,26 +98,26 @@ def maptransactions(
         return [("subtask_resolved", "global", t["taskID"], None)]
 
     @mapper("transactionType=status")
-    def status(t, context:Task):
+    def status(t, context: Task):
         ts = int(t["dateCreated"])
 
         state = t["newValue"]
         if state in ("open", "stalled", "progress"):
-            #for metric in context.metrics(is_started=False):
+            # for metric in context.metrics(is_started=False):
             #    metric.start(state)
-            context.metric(key='status').start(ts, state)
+            context.metric(key="status").start(ts, state)
         elif state in ("declined", "resolved", "invalid"):
             for metric in context.metrics(is_ended=False):
                 metric.end(ts, state)
-            context.metric(key='status').end(ts, state)
+            context.metric(key="status").end(ts, state)
         return [("status", "global", t["oldValue"], t["newValue"])]
 
     @mapper("transactionType=reassign")
     def assign(t, context):
         ts = int(t["dateCreated"])
         if t["oldValue"]:
-            context.metric(key='assign').val(t['oldValue']).end(ts, 'reassign')
-        context.metric(key='assign').val(t['newValue']).start(ts, 'assign')
+            context.metric(key="assign").val(t["oldValue"]).end(ts, "reassign")
+        context.metric(key="assign").val(t["newValue"]).start(ts, "assign")
         return [("assign", "global", t["oldValue"], t["newValue"])]
 
     @mapper("transactionType=core:create")
@@ -143,12 +143,14 @@ def maptransactions(
                 res.append(("columns", ref, fromcol, tocol))
 
                 if source or target:
-                    for i in ('fromPHID', 'toPHID'):
+                    for i in ("fromPHID", "toPHID"):
                         PHObject.instance(ref).metric(task=t["taskID"]).start(ts, tocol)
                         srcphid = getattr(source, i, None)
                         tophid = getattr(target, i, None)
-                        if (srcphid and tophid):
-                            PHObject.instance(ref).metric(task=t["taskID"]).start(ts, tophid)
+                        if srcphid and tophid:
+                            PHObject.instance(ref).metric(task=t["taskID"]).start(
+                                ts, tophid
+                            )
                             res.append(("milestone", ref, srcphid, tophid))
         return res
 

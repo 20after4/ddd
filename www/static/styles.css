@@ -10,3 +10,19 @@ a.phid {
     font-family: monospace;
     white-space: nowrap;
 }
+
+.nav-columns {
+  display: flex;
+  flex-flow: row wrap;
+}
+
+.nav-columns > .col {
+  width: 300px;
+  height: 100px;
+  flex: none;
+  margin: 2px 4px;
+}
+
+.col h3 {
+  font-size: 100%;
+}

@@ -1,0 +1,13 @@
+
+
+<div id='chart-{{slug}}' class='nav-columns'>
+
+  {% for column in data %}
+  <div class='col'>
+      <h3><a href="{{column.projectURI}}">{{ column.name }}</a></h3>
+      {{column.projectStatus}}
+  </div>
+  {% endfor %}
+
+</div>
+

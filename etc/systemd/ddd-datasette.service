@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/srv/ddd
-ExecStart=run-datasette.sh
+ExecStart=etc/ddd-datasette.sh
 User=ddd
 Group=srv
 

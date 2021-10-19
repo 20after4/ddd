@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 from operator import itemgetter
 from pprint import pprint
-from typing import List
+from typing import Any, List
 
 import pandas as pd
 import typer
-from sqlite_utils import Database
+from sqlite_utils.db import Database
 
 from ddd.mw import MWVersion, version
 from ddd.phab import Conduit
@@ -26,7 +26,8 @@ def blockers(
 
     constraints = {
         "subtypes": ["release"],
-    }
+    }  # type: dict[str, list[Any]]
+
     if len(task_ids) and task_ids[0] != "all":
         constraints["ids"] = [int(id.strip(" T")) for id in task_ids]
 
@@ -119,7 +120,7 @@ def blockers(
             # elif metric == 'comment':
             #    train_comments.upsert([])
 
-    pprint(context)
+    # pprint(context)
 
 
 def main():
