@@ -1,0 +1,20 @@
+{% for user in data %}
+
+{% if user.author_name is not none %}
+Author: 
+<a href="{{ user.author_uri }}">{{ user.author_name }}</a>
+<br>
+{% endif %}
+
+{% if user.owner_name is not none %}
+Owner: 
+<a href="{{ user.owner_uri }}">{{ user.owner_name }}</a>
+<br>
+{% endif %}
+
+{% if user.closer_name is not none %}
+Closer: 
+<a href="{{ user.closer_uri }}">{{ user.closer_name }}</a>
+{% endif %}
+
+{% endfor %}

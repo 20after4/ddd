@@ -1,0 +1,12 @@
+{% for task in data %}
+
+Title: <a href="{{ task.uri }}">{{ task.name }}</a>
+<br>
+Status: {{ task.status }}
+
+{% endfor %}
+
+<script type="text/javascript">
+    // Show the filters by default
+    document.querySelector(".dashboard-filters").setAttribute("open", "")
+</script>

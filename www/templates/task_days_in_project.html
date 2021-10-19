@@ -1,0 +1,5 @@
+{% for item in data %}
+
+<a href="{{ item.task_uri }}">T{{ item.task }}</a> has spent about {{ item.days }} days on <a href="{{ item.project_uri }}">{{ item.project_name }}</a>
+
+{% endfor %}

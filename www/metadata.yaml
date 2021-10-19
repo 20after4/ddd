@@ -355,6 +355,85 @@ plugins:
               #   field: value
               #   type: quantitative
                 #impute: {method: 'median'}
+    task-metrics:
+      title: Data³ - task metrics
+      description: Metrics about a task
+      layout:
+        - [task-details, task-projects]
+        - [task-users, task-days-in-project]
+        - [task-days-in-columns, task-days-in-columns]
+      filters:
+        project:
+          name: Project
+          type: select
+          query:
+              WITH project_events as (
+              SELECT * FROM (
+                SELECT
+                  DISTINCT project,
+                  count(*) AS cnt
+                FROM
+                  events e
+                WHERE
+                  e.project LIKE "PHID%"
+                GROUP BY
+                  project
+                ORDER BY cnt desc
+                LIMIT 150
+              )
+            )
+            SELECT
+              p.phid AS key,
+              p.name AS label,
+              p.slug AS slug,
+              p.uri as uri
+            FROM Project p
+            JOIN project_events e
+              ON e.project=p.phid
+            WHERE p.depth<2 and not p.name like 'acl*%'
+            ORDER BY label
+        task_id:
+          name: Task ID
+          type: quantitative
+      charts:
+        task-days-in-project:
+          title: Task days in project
+          db: metrics
+          query: task_days_in_project
+          library: jinja
+          template: task_days_in_project.html
+          visible-when: :task_id
+        task-days-in-columns:
+          title: Days in project columns
+          db: metrics
+          query: select *, next_ts - ts as duration, printf('%.0f', ((next_ts - ts) / 86400.0)) AS duration_days from (select events.*, columns.column_name, columns.project_name, columns.is_default, ifnull(LEAD(ts) OVER(ORDER BY ts), strftime('%s','now', 'localtime')) next_ts from events join columns on new = column_phid where new like '%PHID-PCOL-%' and task = :task_id and event = 'columns' and project_phid = :project order by ts);
+          library: vega
+          display:
+            mark: { type: bar, tooltip: true }
+            encoding:
+              x: { field: duration_days, type: quantitative, title: 'Days in column' }
+              y: { field: column_name, type: nominal, title: 'Column'  }
+        task-details:
+          title: Task details
+          db: metrics
+          query: task_details
+          library: jinja
+          template: task_details.html
+          visible-when: :task_id
+        task-projects:
+          title: Task projects
+          db: metrics
+          query: task_projects
+          library: jinja
+          template: task_projects.html
+          visible-when: :task_id
+        task-users:
+          title: Task users
+          db: metrics
+          query: task_users
+          library: jinja
+          template: task_users.html
+          visible-when: :task_id
 
 
 
@@ -416,5 +495,55 @@ databases:
           WHERE event in ('columns', 'projects') and :project in (project, old, new)
           GROUP BY month
           order by ts
+      task_details:
+        title: basic task details
+        sql: |-
+          SELECT
+          UPPER(SUBSTR(task.name, 1, 1)) || SUBSTR(task.name, 2) as name,
+          json_extract(data, '$.uri') AS uri,
+          json_extract(task.status, '$.name') AS status
+          FROM task 
+          JOIN phobjects ON phobjects.phid = task.phid 
+          WHERE id = :task_id
+      task_projects:
+        title: projects task has been tagged on
+        sql: |-
+          SELECT DISTINCT
+          json_extract(data, '$.uri') AS uri,
+          phid,
+          name
+          FROM task_metrics
+          JOIN phobjects ON phobjects.phid = metric
+          WHERE metric LIKE '%PHID-PROJ-%' AND task = CAST(:task_id AS decimal)
+      task_users:
+        title: users of a task
+        sql: |-
+          SELECT
+          authorPhobjects.name AS author_name,
+          json_extract(authorPhobjects.data, '$.uri') AS author_uri,
+          ownerPhobjects.name AS owner_name,
+          json_extract(ownerPhobjects.data, '$.uri') AS owner_uri,
+          closerPhobjects.name AS closer_name,
+          json_extract(closerPhobjects.data, '$.uri') AS closer_uri
+          FROM Task
+          LEFT OUTER JOIN phobjects authorPhobjects ON authorPHID = authorPhobjects.phid
+          LEFT OUTER JOIN phobjects ownerPhobjects ON ownerPHID = ownerPhobjects.phid
+          LEFT OUTER JOIN phobjects closerPhobjects ON closerPHID = closerPhobjects.phid
+          WHERE id = :task_id 
+      task_days_in_project:
+        title: days in project
+        sql: |-
+          SELECT
+          *,
+          task,
+          uri as project_uri,
+          json_extract(data, '$.uri') AS task_uri,
+          printf('%.0f', (sum(duration) / 86400.0)) as days,
+          Project.name as project_name
+          FROM task_metrics 
+          JOIN Project ON metric = project.phid
+          JOIN phobjects ON phobjects.name = 'T' || task_metrics.task
+          WHERE state = 'tagged' AND project.phid = :project AND task = CAST(:task_id AS decimal)
+
 extra_css_urls:
   - /static/styles.css
