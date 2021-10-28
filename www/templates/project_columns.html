@@ -4,14 +4,17 @@
   <div class='workboard-column-filter col border shadow-sm p-2 mb-1'>
       <h6>
       {% if column.proxyPHID %}
-      <a href="?{{ alter_query_url(query_string, {'project': column.proxyPHID} ) }}">{{column.name}}</a>
+      <a href="?{{ alter_query_url(query_params, {'project': column.proxyPHID} ) }}">{{column.name}}</a>
+      {% elif query_parameters['column'] == column.projectURI %}
+<svg class="icon">
+  <use xlink:href="
       {% elif column.projectURI %}
       <a href="{{column.projectURI}}">{{ column.name }}</a>
       {% else %}
       {{ column.name }}
       {% endif %}
       </h6>
-      <a href="?{{ alter_query_url(query_string, {'column': column.phid} ) }}">filter</a>
+      <a href="?{{ alter_query_url(query_string, {'column': column.phid} ) }}"><img src='/static/icons/search.svg'></a>
   </div>
   {% endfor %}
 </div>

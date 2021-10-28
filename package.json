@@ -11,7 +11,9 @@
     "babel-preset-stage-0": "^6.24.1",
     "babelify": "^10.0.0",
     "browserify": "^17.0.0",
-    "es2015": "0.0.0"
+    "es2015": "0.0.0",
+    "grunt": "^1.4.1",
+    "grunt-svgstore": "^2.0.0"
   },
   "babel": {
     "presets": [

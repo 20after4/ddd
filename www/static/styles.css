@@ -218,15 +218,16 @@ body.db.db-metrics .content > ul > li {
   height: 50px;
   flex-shrink: 1;
   flex-grow: 1;
+  margin-right: .5rem;
 }
 
 .filter-type-text {
-  margin-top: 8px;
+  margin-top: 0.6rem;
   height: 40px;
 }
 
 .filter_projects {
-  flex: 2 1 400px;
+  flex: 10 1 400px;
 }
 
 #filter-group-date {
@@ -241,6 +242,9 @@ body.db.db-metrics .content > ul > li {
 }
 #filter-group-buttons input {
   padding: 0.7rem 0.8rem;
+}
+#filter-group-task_id {
+  flex: 0 0 220px;
 }
 .workboard-column-filter {
   border-radius: 10px 10px 0 0;
