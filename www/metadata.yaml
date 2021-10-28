@@ -57,24 +57,13 @@ plugins:
           query: task_users
           library: jinja
           template: task_users.html
-
-        task_days_in_project:
+        task-days-in-project:
+          title: Days in project
           db: metrics
-          section: task
+          query: task_days_in_project
+          library: jinja
+          template: task_days_in_project.html
           requires: [ task_id, project ]
-          title: days in project
-          sql: |-
-            SELECT
-            *,
-            task,
-            uri as project_uri,
-            json_extract(data, '$.uri') AS task_uri,
-            printf('%.0f', (sum(duration) / 86400.0)) as days,
-            Project.name as project_name
-            FROM task_metrics
-            JOIN Project ON metric = project.phid
-            JOIN phobjects ON phobjects.name = 'T' || task_metrics.task
-            WHERE state = 'tagged' AND project.phid = :project AND task = CAST(:task_id AS decimal)
         task-days-in-columns:
           title: Days in project columns
           db: metrics
@@ -303,93 +292,6 @@ plugins:
               #     x: { field: day, type: temporal}
               #     y: { field: count, type: quantitative, aggregate: mean}
 
-
-
-
-    task-metrics:
-      title: Data³ - task metrics
-      description: Metrics about a task
-      layout:
-        - [task-details, task-projects]
-        - [task-users, task-days-in-project]
-        - [task-days-in-columns, task-days-in-columns]
-      filters:
-        project:
-          name: Project
-          type: custom
-          template: filter_projects.html
-          query: |-
-            [[ select * from Project where phid=:project ]]
-          # query:
-          #     WITH project_events as (
-          #     SELECT * FROM (
-          #       SELECT
-          #         DISTINCT project,
-          #         count(*) AS cnt
-          #       FROM
-          #         events e
-          #       WHERE
-          #         e.project LIKE "PHID%"
-          #       GROUP BY
-          #         project
-          #       ORDER BY cnt desc
-          #       LIMIT 150
-          #     )
-          #   )
-          #   SELECT
-          #     p.phid AS key,
-          #     p.name AS label,
-          #     p.slug AS slug,
-          #     p.uri as uri
-          #   FROM Project p
-          #   JOIN project_events e
-          #     ON e.project=p.phid
-          #   WHERE p.depth<2 and not p.name like 'acl*%'
-          #   ORDER BY label
-        task_id:
-          name: Task ID
-          type: hidden
-      charts:
-        task-days-in-project:
-          title: Task days in project
-          db: metrics
-          query: task_days_in_project
-          library: jinja
-          template: task_days_in_project.html
-          requires: [ task_id, project ]
-        task-days-in-columns:
-          title: Days in project columns
-          db: metrics
-          query: select *, next_ts - ts as duration, printf('%.0f', ((next_ts - ts) / 86400.0)) AS duration_days from (select events.*, columns.column_name, columns.project_name, columns.is_default, ifnull(LEAD(ts) OVER(ORDER BY ts), strftime('%s','now', 'localtime')) next_ts from events join columns on new = column_phid where new like '%PHID-PCOL-%' and task = :task_id and event = 'columns' and project_phid = :project order by ts);
-          library: vega
-          display:
-            mark: { type: bar, tooltip: true }
-            encoding:
-              x: { field: duration_days, type: quantitative, title: 'Days in column' }
-              y: { field: column_name, type: nominal, title: 'Column'  }
-        task-details:
-          title: Task details
-          db: metrics
-          query: task_details
-          library: jinja
-          template: task_details.html
-          requires: task_id
-        task-projects:
-          title: Task projects
-          db: metrics
-          query: task_projects
-          library: jinja
-          template: task_projects.html
-          requires: task_id
-        task-users:
-          title: Task users
-          db: metrics
-          query: task_users
-          library: jinja
-          template: task_users.html
-          requires: task_id
-          # visible-when: :task_id
-
 databases:
   metrics:
     tables:
@@ -569,7 +471,6 @@ databases:
           JOIN Project ON metric = project.phid
           JOIN phobjects ON phobjects.name = 'T' || task_metrics.task
           WHERE state = 'tagged' AND project.phid = :project AND task = CAST(:task_id AS decimal)
-
       task-assignments:
         title: Task Assignments
         sql: SELECT DISTINCT
