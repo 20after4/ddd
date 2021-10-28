@@ -9,6 +9,8 @@ from typing import Dict, Mapping, NewType, Type
 from datasette.app import Datasette
 from datasette.hookspecs import hookimpl
 from datasette.utils.asgi import Request, Response
+import urllib
+import urllib.parse
 from ddd import console
 
 from ddd.phobjects import PHID
@@ -135,6 +137,9 @@ def dashboard_link(object):
     uri = getoneof(object, ['uri','url','href'], "")
     return A(href=uri, label=object['name'])
 
+def build_url(params):
+    return urllib.parse.urlencode(params)
+
 # @hookimpl
 # def menu_links(datasette, actor):
 #     if actor and actor.get("id") == "root":
@@ -153,11 +158,16 @@ def extra_template_vars(template:str, database:str, table:str, columns:str, view
             sql = queries[sql]
         return (await db.execute(sql, args)).rows
 
+    def icon(name, size=24):
+        return Markup(f'<svg class="icon{size}"><use xlink:href="/static/icons.svg#icon-{name}"></svg>')
+
     return {
         "sql": execute_sql,
         "timestamp": datetime.datetime.fromtimestamp,
         "tsdate": datetime.date.fromtimestamp,
-        "dashboard_link": dashboard_link
+        "dashboard_link": dashboard_link,
+        "icon": icon,
+        "build_url": build_url
     }
 
 

@@ -86,7 +86,13 @@ class Conduit(object):
             with open(token_path) as f:
                 arcrc = json.load(f)
                 if self.phab_url in arcrc["hosts"]:
-                    token = arcrc["hosts"][self.phab_url]["token"]
+                    token_host = arcrc["hosts"][self.phab_url]
+                    # use the alternative "api-token" key if there is one
+                    if "api-token" in token_host:
+                        token = token_host["api-token"]
+                    else:
+                        token = token_host["token"]
+
 
         return os.environ.get("CONDUIT_TOKEN", token)
 

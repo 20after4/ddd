@@ -110,6 +110,8 @@ async def init_context(datasette:Datasette, db:Database, request:Request, contex
                 else:
                     total_duration = task['duration']
                     count = 1
+    if count == 0:
+        count = 1
     context['params'] = params
     context['mean_cycle_time'] = round(total_duration.days / count, 1)
     context['int'] = int

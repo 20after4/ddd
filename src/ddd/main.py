@@ -57,6 +57,12 @@ def main(
     PHObject.db = ctx.meta["db"]
     PHObject.conduit = ctx.meta['conduit']
 
+
+@app.command()
+def version():
+    from ddd.version import __version__
+    print(__version__)
+
 @app.command()
 def request(
     ctx: Context,

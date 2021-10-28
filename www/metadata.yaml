@@ -26,7 +26,7 @@ plugins:
           name: Task
           type: text
         column:
-          name: Column
+          name: column
           type: hidden
         date:
           name: Date range
@@ -91,13 +91,13 @@ plugins:
               AND p.status != 'closed'
           library: jinja
           template: project_columns.html
-          requires: project
+          requires: [ project, -task_id ]
           section: top
           columns: 12
         column-metrics:
           title: Tasks added & removed from columns, weekly.
           db: metrics
-          requires: project
+          requires: [ project, -column, -task_id ]
           section: default
           columns: 6
           query: |-
@@ -166,9 +166,10 @@ plugins:
         burnup:
           title: Burnup
           db: metrics
-          requires: project
+          requires: [ project, -task_id ]
           section: default
-          columns: 12
+          columns: 6
+          columns_max: 12
           cardorder: last
           query:
             SELECT distinct
@@ -215,13 +216,69 @@ plugins:
                 type: nominal
                 scale:
                   scheme: category20
+        chill:
+          title: Chill Chart
+          db: metrics
+          requires: [ project, -task_id ]
+          section: default
+          columns: 6
+          columns_max: 12
+          cardorder: last
+          query:
+            SELECT distinct
+                count(distinct task) as value,
+                ph.name as state,
+                state as realstate,
+                ph.phid as state_phid,
+                w.date as week,
+                m.metric as project,
+                m.rowid,
+                date(m.ts, 'unixepoch') as ts,
+                date(m.ts2, 'unixepoch') as ts2
+              FROM
+                task_metrics m
+                JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
+                JOIN (select distinct date from weeks) w
+                 on date(w.date) <= date(m.ts, 'unixepoch')
+                 and date(w.date, '+7 days') >= date(m.ts, 'unixepoch')
+            WHERE
+            m.metric != 'startofwork'
+              [[AND  project=:project  ]]
+              [[AND state=:column ]]
+            AND  state not in ('created','tagged','untagged')
+            and (not state like 'PHID-PROJ-%')
+            AND week >= date(:date_start)
+            AND week <= date(:date_end)
+              GROUP BY
+                state_phid,
+                date(week)
+              ORDER BY
+                m.ts
+          library: vega
+          display:
+            height: 400
+            mark: { type: bar, tooltip: true, clip: true, size: 25}
+            encoding:
+              x:
+                field: week
+                #timeUnit: week
+                type: temporal
+                #scale: { clamp: true,  padding: 0}
+              y:
+                field: value
+                type: quantitative
+              color:
+                field: state
+                type: nominal
+                scale:
+                  scheme: category20
         states:
           title: Status changes
           db: metrics
           requires: [ project, -task_id ]
           section: default
           cardorder: first
-          columns: 6
+          columns: 4
           columns_max: 6
           query:
             select
@@ -234,6 +291,7 @@ plugins:
               old,
               new,
               old||'->'||new as old_new,
+              group_concat(task) as task,
               count(*) as count
             from
               events e

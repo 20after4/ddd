@@ -37,6 +37,10 @@ a.phid {
   height: 400px
 }
 
+form label {
+  font-weight: normal !important;
+}
+
 .subprojects .autocomplete-result-list {
   background-color: #fff;
 }
@@ -254,4 +258,14 @@ body.db.db-metrics .content > ul > li {
 }
 .dashboard-header {
   flex: 0 0 content;
+}
+
+svg.icon {
+  max-width: 16px;
+  max-height: 16px;
+}
+
+svg.icon24 {
+  max-width: 24px;
+  max-height: 24px;
 }

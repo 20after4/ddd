@@ -262,7 +262,7 @@ class Config:
                     UNION ALL
                     SELECT date(date, '+7 days')
                     FROM dates
-                    WHERE date <= date('now')
+                    WHERE date <= date('now', 'weekday 0', '+7 days')
                 )
                 SELECT date FROM dates;
             --sql
@@ -347,10 +347,10 @@ class Config:
         try:
             schemas = schema.split('--sql')
             for schema in schemas:
-                self.console.log(schema)
                 db.executescript(schema)
         except Exception:
             self.console.log("IntegrityError while initializing database schema.")
+            self.console.log("Schema section that failed: ", schema)
             raise
 
 

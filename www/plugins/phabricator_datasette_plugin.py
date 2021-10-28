@@ -110,6 +110,8 @@ def extra_template_vars(datasette):
 def render_cell(
     value, column: str, table: Union[str, None], database: str, datasette: Datasette
 ) -> Union[str, None]:
+    if isinstance(value, int):
+        value = str(value)
     if isinstance(value, bytes):
         try:
             value = value.decode("ascii")
