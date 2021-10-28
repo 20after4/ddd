@@ -131,8 +131,15 @@ class Conduit(object):
         self, queryKey="all", constraints: MutableMapping = {}
     ) -> Cursor:
         """Find projects"""
+
+        query = {}
+        if not constraints or not len(constraints) and queryKey is not None:
+            query["queryKey"] = queryKey
+        if len(constraints):
+            query["constraints"] = constraints
+
         return self.request(
-            "project.search", {"queryKey": queryKey, "constraints": constraints}
+            "project.search", query
         )
 
     def maniphest_search(self, constraints: MutableMapping = {}) -> Cursor:

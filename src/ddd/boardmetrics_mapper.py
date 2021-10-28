@@ -1,8 +1,9 @@
+import re
 import sqlite3
 from collections import deque
 from operator import itemgetter
 from pprint import pprint
-from typing import Iterable, Mapping, Tuple
+from typing import Iterable, Mapping, Set, Tuple
 
 from rich.console import Console
 from rich.status import Status
@@ -14,11 +15,14 @@ from ddd.phobjects import (
     KKVCache,
     PHIDRef,
     PHObject,
+    Project,
     Task,
     TimeSpanMetric,
     sqlite_insert_statement,
 )
 
+RE_AT_MENTION = re.compile(r'@([\w\-\d]+)[\b:]?',
+     re.MULTILINE|re.IGNORECASE)
 
 def maptransactions(
     project_phid,
@@ -28,7 +32,7 @@ def maptransactions(
     phab: Conduit,
     sts: Status,
     cache: KKVCache,
-) -> Tuple[Iterable[Iterable], Iterable[Iterable], Iterable[TimeSpanMetric], Iterable]:
+) -> Tuple[Iterable[Iterable], Set[Project], Set[TimeSpanMetric], Iterable]:
     mapper = PropertyMatcher()
 
     # functions decorated with @ttype will take a transaction object and distill
@@ -37,6 +41,7 @@ def maptransactions(
     # ids = [id for id in tasks.keys()]
 
     all_metrics = set()
+    all_projects = set()
 
     @mapper("transactionType=core:edge", "meta.edge:type=41")
     def projects(t, context: Task):
@@ -57,16 +62,26 @@ def maptransactions(
             if default_column:
                 ref = p
                 res.append(("columns", ref, None, default_column))
+
             if "core.create" in t["meta"]:
                 state = "created"
             else:
                 state = "tagged"
-            metric = PHObject.instance(p).metric(task=t["taskID"]).start(ts, state)
+            proj = PHObject.instance(p)
+            assert(isinstance(proj, Project))
+            context._all_projects.add(proj)
+            metric = proj.metric(task=t["taskID"]).start(ts, state)
             all_metrics.add(metric)
             context.metric(key=p, metric=metric)
-
+            proxyColumn = cache.get_proxy(p)
+            if proxyColumn and proxyColumn.fromPHID:
+                parent_project = cache.get_project(proxyColumn.fromPHID)
+                parent_metric = parent_project.object.metric(task=t['taskID'], key=(context, 'column'))
+                parent_metric.start(ts, proxyColumn.fromPHID)
+                context.metric(key=(proxyColumn.fromPHID, 'column'), metric=parent_metric)
         for p in oldValue:
-            metric = PHObject.instance(p).metric(task=t["taskID"]).end(ts, "untagged")
+            metric = PHObject.instance(p).metric(task=t['taskID']).end(ts, "untagged")
+            metric = context.metric(key=p, metric=metric)
             all_metrics.add(metric)
 
         # if 'core.create' in t['meta']:
@@ -79,7 +94,14 @@ def maptransactions(
 
     @mapper("transactionType=core:comment")
     def comment(t, ctx):
-        return [("comment", None, t["taskID"], None)]
+        comments = t['comments']
+        if comments and isinstance(comments, str):
+            m = RE_AT_MENTION.findall(comments)
+            mentions = [['@mention', None, t['taskID'], mention.lower()] for mention in set(m)]
+            return [("comment", None, None, None), *mentions]
+        else:
+            return None
+
 
     @mapper("transactionType=core:edge", "meta.edge:type=3")
     def subtask(t, context):
@@ -100,15 +122,15 @@ def maptransactions(
     @mapper("transactionType=status")
     def status(t, context: Task):
         ts = int(t["dateCreated"])
-
         state = t["newValue"]
-        if state in ("open", "stalled", "progress"):
+        # console.log('status', task.phid, hash(task), state)
+        if state in Task.OPEN_STATUS:
             # for metric in context.metrics(is_started=False):
             #    metric.start(state)
             context.metric(key="status").start(ts, state)
-        elif state in ("declined", "resolved", "invalid"):
-            for metric in context.metrics(is_ended=False):
-                metric.end(ts, state)
+        elif state in Task.CLOSED_STATUS:
+            #for metric in context.metrics(is_ended=False):
+            #    metric.end(ts, state)
             context.metric(key="status").end(ts, state)
         return [("status", "global", t["oldValue"], t["newValue"])]
 
@@ -116,12 +138,13 @@ def maptransactions(
     def assign(t, context):
         ts = int(t["dateCreated"])
         if t["oldValue"]:
-            context.metric(key="assign").val(t["oldValue"]).end(ts, "reassign")
+            context.metric(key="assign").val(t["oldValue"]).end(ts-1, "reassign")
         context.metric(key="assign").val(t["newValue"]).start(ts, "assign")
         return [("assign", "global", t["oldValue"], t["newValue"])]
 
     @mapper("transactionType=core:create")
     def create(t, context):
+        context.metric(key="create").val('open').start(ts, 'open')
         return [("status", "global", None, "open")]
 
     @mapper("transactionType=core:columns")
@@ -141,16 +164,23 @@ def maptransactions(
                 source = cache.resolve_column(fromcol)
                 ref = obj["boardPHID"]
                 res.append(("columns", ref, fromcol, tocol))
+                project = PHObject.instance(ref)
+                metric = project.metric(task=t["taskID"], key=(context,'column')).start(ts, tocol)
+                context.metric(key=(ref,tocol), metric=metric)
+                metric.key = 'column'
 
                 if source or target:
+
                     for i in ("fromPHID", "toPHID"):
-                        PHObject.instance(ref).metric(task=t["taskID"]).start(ts, tocol)
                         srcphid = getattr(source, i, None)
                         tophid = getattr(target, i, None)
                         if srcphid and tophid:
-                            PHObject.instance(ref).metric(task=t["taskID"]).start(
+
+                            metric = project.metric(key=(context,'column'), task=t["taskID"]).start(
                                 ts, tophid
                             )
+                            context.metric(key=(ref, tophid), metric=metric)
+                            metric.key = 'column'
                             res.append(("milestone", ref, srcphid, tophid))
         return res
 
@@ -206,7 +236,17 @@ def maptransactions(
                             except sqlite3.InterfaceError as e:
                                 print(event)
                                 continue
+
+        start = task.startofwork()
+        if start:
+            all_metrics.add(start)
+
         for metric in task.all_metrics().values():
             all_metrics.add(metric)
+        for proj in task._all_projects:
+            all_projects.add(proj)
+
+
+
     con.commit()
-    return datapoints, metrics, all_metrics, taskids
+    return datapoints, all_projects, all_metrics, taskids

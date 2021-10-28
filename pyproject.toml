@@ -12,14 +12,14 @@ packages = [
 [tool.poetry.dependencies]
 python = '^3.7'
 typer = {extras = ["all"], version = "^0.3.2"}
-datasette = "^0.58.1"
+datasette = { path = "src/datasette", develop = true }
 datasette-dashboards = { path = "src/datasette-dashboards", develop = true }
 click = "<7.2"
 semver = "^2.13.0"
 requests = "^2.26.0"
 sqlite-utils = "^3.17"
 rich = "^10.11.0"
-
+regex = "2021.10.8"
 
 [tool.poetry.dev-dependencies]
 black = "^21.9b0"

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "es2015",
+    "target": "es2015",
+    "jsx": "preserve",
+    "strictFunctionTypes": true,
+    "sourceMap": true,
+    "baseUrl": "./www",
+    "paths": {
+        "static/*": ["static/*"],
+    },
+  },
+}

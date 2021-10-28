@@ -1,3 +1,8 @@
 {
-    "sql_time_limit_ms": 9000
+    "sql_time_limit_ms": 9000,
+    "max_returned_rows": 2000,
+    "truncate_cells_html": 150,
+    "default_cache_ttl": 3600,
+    "cache_size_kb": 102400,
+    "hash_urls": true
 }

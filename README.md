@@ -1,7 +1,16 @@
-# D³
+# Data³
 
-`ddd` or `d³` is a toolkit for accessing APIs and processing data from disperate
- systems.
+Data³ is a toolkit and general framework for visualizing just about any data. Wikimedia's engineering productivity team have begun assembling a toolkit to help us organize, analyze and visualize data collected from our development, deployment, testing and project planning processes. There is a need for better tooling and data collection in order to have reliable and accessible data to inform data-driven decision-making. This is important because we need to measure the impact of changes to our deployment processes and team practices so that we can know whether a change to our process is beneficial and quantify the impacts of the changes we make.
+
+The first applications for the Data³ tools are focused on exploring software development and deployment data, as well as workflow metrics exported from Wikimedia's phabricator instance.
+
+The core of the toolkit consists of the following:
+
+* Datasette.io provides a front-end for browsing and querying one or more SQLite databases.
+* A customized version of datasette-dashboards is included for visualizing the output of queries in Vega/Vega-Lite charts and it can render jinja templates for custom reports or interactive displays.
+* A comprehensive python library and command line interface for querying and processing Phabricator task data exported via conduit api requests.
+* Several custom dashboards for datasette which provide visualization of metrics related to Phabricator tasks and workflows.
+* A custom dashboard to explore data and statistics about production MediaWiki deployments.
 
 ## Status
 
@@ -37,10 +46,9 @@ You can use the following sub-commands by running `dddcli sub-command [args]` to
 
 ### Phabricator metrics:  `dddcli metrics`
 
-This tool is used to extract data from phabricator and organize it in a structure that will facilitate further analysis.
-The analysis of task activities can provide some insight into workflows.
-The output if this tool will be used as the data source for charts to visualize certain agile project planning metrics.
-
+* This tool is used to extract data from phabricator and organize it in a structure that will facilitate further analysis.
+* The analysis of task activities can provide some insight into workflows.
+* The output if this tool will be used as the data source for charts to visualize certain agile project planning metrics.
 
 #### cache-columns
 The first thing to do is cache the columns for the project you're interested in.
@@ -56,10 +64,10 @@ Then you can fetch the actual metrics and map them into local sqlite tables with
 
 
 ```bash
-dddcli metrics map --project=PHID-PROJ-uier7rukzszoewbhj7ja
+dddcli metrics map --project=#release-engineering-team
 ```
 
-Note that `--project` accepts either a `PHID` or a project `#hashtag`, so you can try `dddcli metrics map --project=#releng`, for example.
+Note that `--project` accepts either a `PHID` or a project `#hashtag`
 
 To get cli usage help, try
 
@@ -77,17 +85,33 @@ This runs the mapper with data from a file, treating that as a mock api call res
 
 If you omit the --mock argument then it will request a rather large amount of data from the phabricator API which takes an extra 20+ seconds to fetch.
 
-### datasette
+### Datasette
 
-To run datasette, from the ddd checkout:
+The main user interface for the Data³ tool is provided by Datasette.
+
+Datasette is installed as a dependency of this repo by running `poetry install` from the repository root.
+
+Once dependencies are installed, you can run datasette from the ddd checkout like this:
 
 ```bash
 export DATASETTE_PORT=8001
-datasette --reload --metadata www/metadata.yaml -h 0.0.0.0 -p $DATASETTE_PORT  www
+export DATASETTE_HOST=localhost # or use 0.0.0.0 to listen on a public interface
+export DATASETTE_DIR=./www  #this should point to the www directory included in this repo.
+datasette --reload --metadata www/metadata.yaml -h #DATASETTE_HOST -p $DATASETTE_PORT  $DATASETTE_DIR
 ```
 
-Sample systemd units are in `etc/systemd/*` including a file watcher to restart datasette
-when the data changes.
+For deployment on a server, there are sample systemd units in `etc/systemd/*` including a file watcher to
+restart datasette when the data changes. Approximately the same behavior is achieved by the --reload argument to the
+datasette command given here and that is adequate for development and testing locally.
+
+### Datasette Plugins 
+
+Datasette has been extended with some plugins to add custom functionality.
+
+* See `www/plugins` for Data³ customizations.
+* There is also a customized version of datasette-dashboards which is included via a submodule at
+`src/datacube-dashboards`.  Do the usual `git submodule update --init` to get that source code.
+* There are custom views and routes added in ddd_datasette.py that map urls like /-/ddd/$page/  to files in `www/templates/view/`.
 
 # Example code:
 

@@ -1,13 +1,20 @@
 import sqlite3
-from typing import Union
+from typing import Collection, Sequence, Union
+from urllib.request import Request
+
+from datasette.facets import ColumnFacet, Facet
+from datasette.utils import escape_sqlite, path_with_added_args, path_with_removed_args
+import sqlite_utils
+from sqlite_utils.db import NotFoundError
+import ddd
 from ddd.phab import Conduit
 
 
 from ddd.phobjects import DataCache, PHIDType, isPHID, PHID, register_sqlite_adaptors, PHObject
 from datasette.hookspecs import hookimpl
 from datasette.app import Datasette
-from datasette.database import Database
-import jinja2
+from datasette.database import Database, QueryInterrupted
+from jinja2.utils import Markup, escape
 import json
 
 phab = Conduit()
@@ -37,9 +44,9 @@ def prepare_connection(conn: sqlite3.Connection):
 def A(href, label, target=None):
     if target:
         target = f' target="{target}"'
-    return jinja2.utils.Markup(
+    return Markup(
         '<a class="phid" title="{label}" href="{href}"{target}>{label}</a>'.format(
-            href=jinja2.utils.escape(href), label=jinja2.utils.escape(label or "") or "&nbsp;",
+            href=escape(href), label=escape(label or "") or "&nbsp;",
             target=target
         )
     )
@@ -47,12 +54,56 @@ def A(href, label, target=None):
 
 @hookimpl
 def extra_template_vars(datasette):
+    async def all_subprojects(project:PHID):
+        sql="""--sql
+        WITH RECURSIVE parent_of(x, project_name, slug, uri, lvl) AS
+        (
+            SELECT
+                phid AS x,
+                name,
+                '',
+                '',
+                0
+            FROM
+                Project p0
+            WHERE
+                phid = :project
+            UNION ALL
+            SELECT
+                p1.phid AS phid,
+                p1.name AS project_name,
+                p1.slug as slug,
+                p1.uri as uri,
+                lvl + 1 AS lvl
+            FROM
+                Project p1
+            JOIN
+                parent_of p2 ON p1.parent = x
+        )
+        SELECT
+            po.*,
+            c.name AS column_name,
+            c.phid AS column_phid
+        FROM
+            parent_of po
+        JOIN
+            ProjectColumn c ON c.project = po.x
+        ORDER BY
+            lvl,
+            project_name,
+            column_name;
+        """
 
-    async def execute_query(sql, args=None, database=None):
-        db = datasette.get_database(database)
-        return (await db.execute(sql, args)).rows
+        db = datasette.get_database('metrics')
 
-    return {"sql": execute_query}
+        args={'project':project}
+        rows = (await db.execute(sql, args)).rows
+        phids = [row.phid for row in rows]
+        print(phids)
+        return phids
+
+    return {
+        "all_subprojects": all_subprojects}
 
 
 @hookimpl
@@ -86,12 +137,12 @@ def render_cell(
             try:
                 data = json.loads(value)
                 data = [A(href=f'/metrics/phobjects/{phid}', label=phid) for phid in data]
-                return jinja2.Markup(",<br> ".join(data))
+                return Markup(",<br> ".join(data))
             except ValueError:
                 return None
 
     if isPHID(value):
-        db = datasette.get_database('metrics') # type: Database
+        #db = datasette.get_database('metrics') # type: Database
 
         try:
             _ = value.index(',')
@@ -99,8 +150,135 @@ def render_cell(
                 A(href=f'/metrics/phobjects/{phid}', label=phid)
                 for phid in value.split(',')
             ]
-            return jinja2.Markup("<br>".join(data))
+            return Markup("<br>\n".join(data))
         except ValueError:
             return A(href=f'/metrics/phobjects/{value}', label=value)
 
     return None
+
+class PHIDFacet(ColumnFacet):
+    # This key must be unique across all facet classes:
+    type:str = "phid"
+    sql:str
+    request:Request
+    database:str
+    ds:Datasette
+    params:Collection
+    table:str
+
+    async def suggest(self):
+
+        columns_res = await self.ds.execute(
+            self.database, f"select * from ({self.sql}) limit 1", self.params or []
+        )
+        columns = columns_res.columns
+        row = columns_res.first()
+        if not row:
+            return []
+
+        suggested_facets = []
+        already_enabled = [c["config"]["simple"] for c in self.get_configs()]
+
+        # Use self.sql and self.params to suggest some facets
+        suggested_facets = []
+
+        for column in columns:
+            # ddd.console.log('isPHID: ', row[column], isPHID(row[column]))
+            if isPHID(row[column]):
+                # ddd.console.log('isPHID: ', row[column], isPHID(row[column]))
+                suggested_facets.append({
+                    "name": f"PHID:{column}",
+
+                    "toggle_url": self.ds.absolute_url(
+                        self.request, path_with_added_args(
+                            self.request, {"_facet_phid": column}
+                        )
+                    ),
+                })
+
+        return suggested_facets
+
+    async def facet_results(self):
+        facet_results = {}
+        facets_timed_out = []
+
+        qs_pairs = self.get_querystring_pairs()
+        db = self.ds.get_database(self.database)
+        PHObject.db = sqlite_utils.db.Database(db.connect())
+        facet_size = self.get_facet_size()
+        for source_and_config in self.get_configs():
+            config = source_and_config["config"]
+            source = source_and_config["source"]
+            column = config.get("column") or config["simple"]
+            facet_sql = """
+                select {col} as value, count(*) as count from (
+                    {sql}
+                )
+                where {col} is not null
+                group by {col} order by count desc, value limit {limit}
+            """.format(
+                col=escape_sqlite(column), sql=self.sql, limit=facet_size + 1
+            )
+            try:
+                facet_rows_results = await self.ds.execute(
+                    self.database,
+                    facet_sql,
+                    self.params,
+                    truncate=False,
+                    custom_time_limit=self.ds.setting("facet_time_limit_ms"),
+                )
+                facet_results_values = []
+                facet_results[column] = {
+                    "name": column,
+                    "type": self.type,
+                    "hideable": source != "metadata",
+                    "toggle_url": path_with_removed_args(
+                        self.request, {"_facet_phid": column}
+                    ),
+                    "results": facet_results_values,
+                    "truncated": len(facet_rows_results) > facet_size,
+                }
+                facet_rows = facet_rows_results.rows[:facet_size]
+                if self.table:
+                    # Attempt to expand foreign keys into labels
+                    values = [row["value"] for row in facet_rows]
+                    expanded = await self.ds.expand_foreign_keys(
+                        self.database, self.table, column, values
+                    )
+                else:
+                    expanded = {}
+                for row in facet_rows:
+                    selected = (column, str(row["value"])) in qs_pairs
+                    obj = PHObject.instance(row["value"])
+                    try:
+                        obj.load()
+                        ddd.console.log(obj)
+                    except NotFoundError:
+                        continue
+                    if selected:
+                        toggle_path = path_with_removed_args(
+                            self.request, {column: obj.phid}
+                        )
+                    else:
+                        toggle_path = path_with_added_args(
+                            self.request, {column: obj.phid}
+                        )
+                    facet_results_values.append(
+                        {
+                            "value": obj.phid,
+                            "label": obj.name,
+                            "count": row["count"],
+                            "toggle_url": self.ds.absolute_url(
+                                self.request, toggle_path
+                            ),
+                            "selected": selected,
+                        }
+                    )
+            except QueryInterrupted:
+                facets_timed_out.append(column)
+
+        return facet_results, facets_timed_out
+
+@hookimpl
+def register_facet_classes():
+    return [PHIDFacet]

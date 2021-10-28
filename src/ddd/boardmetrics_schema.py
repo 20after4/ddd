@@ -4,7 +4,8 @@ from ddd.phobjects import sqlite_connect
 from pathlib import Path
 from typing import Optional
 from rich.console import Console
-from typer import Option, Context
+from typer.params import Option
+from typer.models import Context
 from ddd.phab import Conduit
 
 from sqlite_utils.db import Database
@@ -38,15 +39,180 @@ class Config:
             --sql
             CREATE UNIQUE INDEX IF NOT EXISTS ts_column_task on column_metrics(ts, column, task);
             --sql
-            CREATE TABLE IF NOT EXISTS task_metrics(task, metric phid, state, ts datetime, ts2 datetime, duration seconds);
+            CREATE TABLE IF NOT EXISTS task_metrics(task int, metric phid, state, ts datetime, ts2 datetime, duration seconds);
             --sql
-            CREATE UNIQUE INDEX IF NOT EXISTS task_metric ON task_metrics(task, metric, state, ts);
+            CREATE UNIQUE INDEX IF NOT EXISTS task_metric ON task_metrics(ts, task, metric, state);
             --sql
-            CREATE TABLE IF NOT EXISTS events(ts, task, project phid, user phid, event, old, new);
+            CREATE INDEX IF NOT EXISTS task_metrics_task on task_metrics(task);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_metrics_metric on task_metrics(metric, state);
+            --sql
+            CREATE TABLE IF NOT EXISTS events(ts datetime, task int, project phid, user phid, event, old text, new text);
             --sql
             CREATE UNIQUE INDEX IF NOT EXISTS events_pk on events(ts, task, project, event, old, new);
             --sql
-            CREATE INDEX IF NOT EXISTS events_project on events(event, project, old, new);
+            CREATE INDEX IF NOT EXISTS events_project on events(project, event);
+            --sql
+            CREATE INDEX IF NOT EXISTS events_task on events(task, new);
+            --sql
+            CREATE INDEX IF NOT EXISTS events_event on events(event, task);
+            --sql
+            CREATE INDEX IF NOT EXISTS events_new on events(event, new);
+            --sql
+            CREATE INDEX IF NOT EXISTS events_user on events(user, event);
+            --sql
+            CREATE INDEX IF NOT EXISTS events_ts on events(ts);
+            --sql
+            CREATE TABLE IF NOT EXISTS Project (
+            name TEXT,
+            status TEXT,
+            phid TEXT PRIMARY KEY,
+            dateCreated DATETIME,
+            dateModified DATETIME,
+            id INTEGER,
+            uri TEXT,
+            typeName TEXT,
+            type TEXT,
+            fullName TEXT,
+            slug TEXT,
+            subtype TEXT,
+            milestone TEXT,
+            depth INTEGER,
+            parent phid,
+            icon TEXT,
+            color TEXT,
+            spacePHID phid,
+            policy TEXT,
+            description TEXT,
+            [custom.custom:repository] TEXT,
+            [custom.sprint:start] TEXT,
+            [custom.sprint:end] TEXT,
+            [attachments] TEXT
+            );
+            --sql
+            CREATE INDEX IF NOT EXISTS Project_hasparent on Project(parent) where parent is not null;
+            --sql
+            CREATE INDEX IF NOT EXISTS Project_isopen on Project(status) where status='open';
+            --sql
+            CREATE INDEX IF NOT EXISTS Project_phid_parent on Project(phid, status) where status='open';
+            --sql
+            CREATE INDEX IF NOT EXISTS Project_parent_status on Project(parent, status);
+            --sql
+            CREATE INDEX IF NOT EXISTS Project_root on Project(parent, status) where parent is null and status='open';
+            --sql
+            CREATE TABLE IF NOT EXISTS ProjectColumn (
+                name TEXT,
+                status TEXT,
+                phid TEXT PRIMARY KEY,
+                dateCreated DATETIME,
+                dateModified DATETIME,
+                proxyPHID phid,
+                project phid,
+                isDefaultColumn INTEGER,
+                policy TEXT,
+                id INTEGER,
+                type TEXT,
+                attachments TEXT
+                );
+            --sql
+            CREATE INDEX IF NOT EXISTS ProjectColumn_status on ProjectColumn(status);
+            --sql
+            CREATE INDEX IF NOT EXISTS ProjectColumn_project on ProjectColumn(project);
+            --sql
+            CREATE INDEX IF NOT EXISTS ProjectColumn_proxyPHID on ProjectColumn(proxyPHID) where proxyPHID is not null;
+            --sql
+            CREATE INDEX IF NOT EXISTS ProjectColumn_isDefaultColumn on ProjectColumn(isDefaultColumn) where isDefaultColumn=1;
+            --sql
+            CREATE TABLE IF NOT EXISTS [columns] (
+                [project_name] TEXT,
+                [column_name] TEXT,
+                [project_phid] TEXT,
+                [column_phid] TEXT PRIMARY KEY,
+                [status] TEXT,
+                [proxyPHID] TEXT,
+                [dateCreated] TEXT,
+                [dateModified] TEXT,
+                [is_default] TEXT
+            );
+            --sql
+            CREATE INDEX IF NOT EXISTS columns_project on columns(project_phid, proxyPHID) where proxyPHID is not null
+            --sql
+            CREATE TABLE IF NOT EXISTS [Task] (
+                [name] TEXT,
+                [status] TEXT,
+                [phid] TEXT PRIMARY KEY,
+                [dateCreated] INTEGER,
+                [dateModified] INTEGER,
+                [description] TEXT,
+                [authorPHID] TEXT,
+                [ownerPHID] TEXT,
+                [priority] TEXT,
+                [points] TEXT,
+                [subtype] TEXT,
+                [closerPHID] TEXT,
+                [dateClosed] INTEGER,
+                [spacePHID] TEXT,
+                [policy] TEXT,
+                [custom.deadline.due] TEXT,
+                [custom.train.status] TEXT,
+                [custom.train.backup] TEXT,
+                [custom.external_reference] TEXT,
+                [custom.release.version] TEXT,
+                [custom.release.date] TEXT,
+                [custom.security_topic] TEXT,
+                [custom.risk.summary] TEXT,
+                [custom.risk.impacted] TEXT,
+                [custom.risk.rating] TEXT,
+                [custom.requestor.affiliation] TEXT,
+                [custom.error.reqid] TEXT,
+                [custom.error.stack] TEXT,
+                [custom.error.url] TEXT,
+                [custom.error.id] TEXT,
+                [custom.points.final] TEXT,
+                [custom.deadline.start] TEXT,
+                [id] INTEGER,
+                [type] TEXT,
+                [attachments] TEXT
+            );
+            --sql
+            CREATE INDEX IF NOT EXISTS task_id on Task(id);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_phid on Task(phid);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_owner on Task(ownerPHID);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_author on Task(authorPHID);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_closer on Task(closerPHID);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_closed on Task(dateClosed);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_created on Task(dateCreated);
+            --sql
+            DROP VIEW IF EXISTS view_task_cycletime;
+            --sql
+            CREATE VIEW IF NOT EXISTS
+                view_task_cycletime
+            AS
+            SELECT
+                task,
+                min(start_date) AS start,
+                max(start_date) AS end,
+                (max(ts) - min(ts))/3600 AS hours,
+                (max(ts) - min(ts))/86400 AS days
+            FROM (
+                SELECT
+                    task,
+                    ts,
+                    datetime(ts, 'unixepoch') AS start_date
+                FROM
+                    task_metrics
+                WHERE
+                    metric IN ('startofwork', 'endofwork')
+                ORDER BY
+                    task, metric=='startofwork' DESC
+                )
+            GROUP BY task;
             --sql
             DROP VIEW IF EXISTS view_column_metrics;
             --sql
@@ -92,7 +258,7 @@ class Config:
             CREATE VIEW IF NOT EXISTS
                 weeks AS
                 WITH RECURSIVE dates(date) AS (
-                    VALUES(date('now', 'weekday 1', '-1344 days'))
+                    VALUES(date('now', 'weekday 0', '-1344 days'))
                     UNION ALL
                     SELECT date(date, '+7 days')
                     FROM dates
@@ -121,7 +287,7 @@ class Config:
                 t.task,
                 t.metric,
                 t.state,
-                coalesce(w.date, date(t.ts, 'unixepoch', 'weekday 1')) as weekdate
+                coalesce(w.date, date(t.ts, 'unixepoch', 'weekday 0')) as weekdate
             FROM task_metrics t
             LEFT JOIN days w ON w.date > t.ts AND w.date < t.ts2;
 
@@ -157,11 +323,33 @@ class Config:
             ON m.metric=p.phid
             GROUP BY metric, week
             ORDER BY week;
-
+            --sql
+            DROP VIEW IF EXISTS enabled_columns_and_milestones;
+            --sql
+            CREATE VIEW IF NOT EXISTS
+                enabled_columns_and_milestones AS
+            SELECT
+                c.name,
+                c.project as project,
+                c.phid AS phid,
+                c.proxyPHID as milestone_phid,
+                p.uri AS milestone_uri
+            FROM ProjectColumn c
+            LEFT JOIN
+             Project p
+                ON c.proxyPHID = p.phid
+                AND p.status != 'closed'
+            WHERE
+              CAST(c.status as int) = 0;
+            --sql
+            analyze;
         """
         try:
-            db.executescript(schema)
-        except sqlite3.IntegrityError:
+            schemas = schema.split('--sql')
+            for schema in schemas:
+                self.console.log(schema)
+                db.executescript(schema)
+        except Exception:
             self.console.log("IntegrityError while initializing database schema.")
             raise
 

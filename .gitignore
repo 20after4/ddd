@@ -1,6 +1,8 @@
 __pycache__
 .mypy_cache
 .pytest_cache
+*.bak
+*.old
 *.csv
 *.pyc
 .ipynb_checkpoints
@@ -9,8 +11,10 @@ __pycache__
 *.egg-info
 *.db
 /.eggs
+/build
 /dist
 /.venv
 /test/*.json
 /ddd.code-workspace
 /ignore/*
+/node_modules/

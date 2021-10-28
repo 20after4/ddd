@@ -1,13 +1,18 @@
-
-
-<div id='chart-{{slug}}' class='nav-columns'>
-
+<div class='dashboard-card-title'>Columns</div>
+<div id='chart-{{slug}}' class='row nav-columns'>
   {% for column in data %}
-  <div class='col'>
-      <h3><a href="{{column.projectURI}}">{{ column.name }}</a></h3>
-      {{column.projectStatus}}
+  <div class='workboard-column-filter col border shadow-sm p-2 mb-1'>
+      <h6>
+      {% if column.proxyPHID %}
+      <a href="?{{ alter_query_url(query_string, {'project': column.proxyPHID} ) }}">{{column.name}}</a>
+      {% elif column.projectURI %}
+      <a href="{{column.projectURI}}">{{ column.name }}</a>
+      {% else %}
+      {{ column.name }}
+      {% endif %}
+      </h6>
+      <a href="?{{ alter_query_url(query_string, {'column': column.phid} ) }}">filter</a>
   </div>
   {% endfor %}
-
 </div>
 

@@ -1,3 +1,6 @@
 [submodule "src/datasette-dashboards"]
 	path = src/datasette-dashboards
 	url = https://gitlab.wikimedia.org/20after4/datasette-dashboards.git
+[submodule "src/datasette"]
+	path = src/datasette
+	url = https://gitlab.wikimedia.org/twentyafterfour/datasette.git

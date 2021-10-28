@@ -2,12 +2,12 @@ from __future__ import annotations
 from abc import abstractproperty
 from dataclasses import dataclass
 
-from typing import TYPE_CHECKING, Deque
+from typing import TYPE_CHECKING, Deque, Hashable, Set
 
 if TYPE_CHECKING:
     from ddd.phab import Conduit
 
-import datetime
+from datetime import datetime, timedelta
 import json
 import sqlite3
 import time
@@ -70,8 +70,8 @@ class PhabObjectBase(UserDict, dict):
     id: int
     name: str
     fullName: str
-    dateCreated: datetime.datetime
-    dateModified: datetime.datetime
+    dateCreated: datetime
+    dateModified: datetime
     status: Status
 
     def __init__(self, phid: PHID, **kwargs):
@@ -287,8 +287,8 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             kwargs.pop("dateModified") if "dateModified" in kwargs else dateCreated
         )
         super().__init__(phid)
-        self.dateCreated = datetime.datetime.fromtimestamp(dateCreated)
-        self.dateModified = datetime.datetime.fromtimestamp(dateModified)
+        self.dateCreated = datetime.fromtimestamp(dateCreated)
+        self.dateModified = datetime.fromtimestamp(dateModified)
 
     def __eq__(self, other: object):
         if isinstance(other, PhabObjectBase):
@@ -300,13 +300,14 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             return self.dateModified < other.dateModified
         return NotImplemented
 
-    def get_table(self) -> Table:
-        if hasattr(self.__class__, "table") and self.__class__.table is not None:
+    def get_table(self, table_name=None) -> Table:
+        if not table_name and hasattr(self.__class__, "table") and self.__class__.table is not None:
             return self.__class__.table
-
-        name = self.__class__.__name__
-        table = Table(PHObject.db, name, pk="phid", alter=True)
-        self.__class__.table = table
+        if not table_name:
+            table_name = self.__class__.__name__
+        table = Table(PHObject.db, table_name, pk="phid", alter=True)
+        if table_name == self.__class__.__name__:
+            self.__class__.table = table
         return table
 
     def save(self, data: Optional[MutableMapping] = None):
@@ -314,12 +315,12 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             data = self.data
         for t in type(self)._derived_tables.values():
             derived_row = t.row(self)
-            t.table.upsert(derived_row, alter=True)
+            t.table.insert_all([derived_row], alter=True, upsert=True)
 
         table = self.get_table()
         if table:
             record = {k: v for k, v in _filter(data.items())}
-            table.upsert(record, alter=True)
+            table.insert_all([record], alter=True, upsert=True)
 
     def load(self):
         try:
@@ -328,6 +329,9 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
             self.update(data)
         except NotFoundError as e:
             console.log(e)
+            table=self.get_table('phobjects')
+            data = table.get(self.phid)
+            self.update(data)
 
         return self
 
@@ -383,6 +387,9 @@ class PHObject(PhabObjectBase, SubclassCache[PHID, PhabObjectBase]):
 
         return __class__.instances
 
+    def __hash__(self):
+        return hash(self.phid)
+
 
 class PHObjectWithFields(PHObject):
     def update(self, *args, **kwds):
@@ -397,23 +404,36 @@ class User(PHObject):
     pass
 
 
+def dt(ts:Union[datetime, str, int]) -> datetime:
+    '''Convert to datetime, from a timestamp as int or string'''
+    if isinstance(ts, datetime):
+        return ts
+    elif isinstance(ts, str):
+        ts = int(ts)
+    return datetime.fromtimestamp(ts)
+
+ONE_SECOND = timedelta(seconds=1)
+
+class NotStartedError(Exception):
+    """Metric is missing it's start time"""
+    pass
+
 @dataclass
 class TimeSpan:
-    start: datetime.datetime
-    end: Optional[datetime.datetime] = None
-    state: Optional[str] = None
+    start: datetime
+    end: Optional[datetime] = None
+    action: Optional[str] = None
+    state: Optional[str|PHID] = None
 
     def duration(self):
-
-        if self.end:
-            delta = self.end - self.start
-        else:
-            delta = datetime.datetime.now() - self.start
+        if not self.end:
+            return 0
+        delta = self.end - self.start
         return delta.total_seconds()
 
 
 class TimeSpanMetric:
-    spans: Deque
+    spans: Deque[TimeSpan]
     last: Optional[TimeSpan]
     key: Optional[str]
     project: Any
@@ -427,10 +447,11 @@ class TimeSpanMetric:
         self._value = None
 
     def start(self, ts, state="open") -> TimeSpanMetric:
+        ts=dt(ts)
         if self.last:
-            self.end(ts - 1)
-        ts = datetime.datetime.fromtimestamp(ts)
+            self.end(ts - ONE_SECOND)
         self.last = TimeSpan(start=ts, state=state)
+        self.spans.append(self.last)
         return self
 
     def started(self):
@@ -442,20 +463,33 @@ class TimeSpanMetric:
     def empty(self):
         return self.last is None and len(self.spans) == 0
 
+    def limit(self, maxlen:int):
+        spans = deque(maxlen = maxlen)
+        if len(self.spans) > maxlen:
+            for _ in range(maxlen):
+                spans.appendleft(self.spans.pop())
+        else:
+            spans.extend(self.spans)
+        self.spans = spans
+        return self
+
     def end(self, ts, state=None, implied_start=True) -> TimeSpanMetric:
-        if not self.last:
+        ts=dt(ts)
+
+        if (implied_start and state is not None and
+            (self.last is None or self.last.state != state)):
+            self.start(ts - ONE_SECOND, state)
+        elif not self.last:
             if not implied_start:
                 return self
-            self.start(ts - 1)
-            assert self.last is not None
-        if isinstance(ts, str):
-            ts = int(ts)
-        ts = datetime.datetime.fromtimestamp(ts)
+            self.start(ts - ONE_SECOND)
+
+        assert self.last is not None
+
         self.last.end = ts
         if state:
             self.last.state = state
 
-        self.spans.append(self.last)
         self.last = None
         return self
 
@@ -468,6 +502,16 @@ class TimeSpanMetric:
     @property
     def value(self):
         return self.key if self._value is None else self._value
+
+    @property
+    def state(self):
+        if self.last:
+            return self.last.state
+        elif len(self.spans):
+            # type-inferring of `spans[-1:]` is buggy
+            span = self.spans[-1:] #type: ignore
+            return span.state #type: ignore
+
 
     @value.setter
     def value(self, v):
@@ -484,20 +528,23 @@ class TimeSpanMetric:
         self._task = val
 
     def __repr__(self) -> str:
-        return f"TimeSpanMetric(t={self.task} p={self.project} last={self.last} spans={self.spans})"
+        return f"TimeSpanMetric(k={self.key} t={self._task} p={self.project} v='{self._value}' last={self.last})"
 
 
 class MetricsMixin:
     _metrics: defaultdict[Any, TimeSpanMetric]
     phid: PHID
 
-    def metrics(self, is_started=True, is_ended=True):
+    def metrics(self, is_started=None, is_ended=None) -> Set[TimeSpanMetric]:
         """Retrieve metrics, optionally filtered by their state"""
-        return {
-            k: v
-            for k, v in self._metrics.items()
-            if ((v.last is None == is_ended) or (v.last is not None == is_started))
-        }
+        res = set()
+        for v in self._metrics.values():
+            if is_ended is not None and is_ended != v.ended():
+                continue
+            if is_started is not None and is_started != v.started():
+                continue
+            res.add(v)
+        return res
 
     def close(self, ts, state=None):
         """Record the end of a metric's time period"""
@@ -540,8 +587,10 @@ class Project(PHObjectWithFields, MetricsMixin):
         self._metrics = defaultdict(TimeSpanMetric)
         self._metrics["project"] = self["phid"]
 
-    def metric(self, task) -> TimeSpanMetric:
-        return super().metric(key=task, task=task, value=self.phid)
+    def metric(self, task, key=None) -> TimeSpanMetric:
+        if not key:
+            key = task
+        return super().metric(key=key, task=task, value=self.phid, project=self)
 
     def default_column(self) -> ProjectColumn:
         if self._default:
@@ -583,15 +632,46 @@ class ProjectColumn(PHObjectWithFields):
 
 
 class Task(PHObjectWithFields, MetricsMixin):
+    OPEN_STATUS = ("open", "stalled", "progress")
+    CLOSED_STATUS = ("declined", "resolved", "invalid", "duplicate")
+    _all_projects:Set[Project] = set()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._metrics = defaultdict(TimeSpanMetric)
 
     def metric(
-        self, key: str, metric: Optional[TimeSpanMetric] = None
+        self, key: Hashable, metric: Optional[TimeSpanMetric] = None
     ) -> TimeSpanMetric:
-        return super().metric(key=key, metric=metric, task=self.phid)
+        metric = super().metric(key=key, metric=metric, task=self.phid)
+        return metric
 
+    def startofwork(self) -> Optional[TimeSpanMetric]:
+        now = datetime.now()
+        start = now
+        state = None
+        startofwork = self.metric('startofwork')
+        endofwork = self.metric('endofwork').limit(1)
+        for key, metric in self._metrics.items():
+            start_metric = None
+            if key == 'status':
+                for span in metric.spans:
+                    if span.state in Task.CLOSED_STATUS:
+                        endofwork.start(span.start, span.state)
+                    elif span.state == 'progress':
+                        start = span.start
+                        state = span.state
+                        break
+            elif metric.key == 'column' and metric.spans[0].start < start:
+                metric.key = key
+                start = metric.spans[0].start
+                state = metric.spans[0].state
+
+        if start is not now:
+            metric = startofwork.start(start, state)
+            return metric
+        else:
+            return None
 
 class Commit(PHObject):
     pass
@@ -675,16 +755,21 @@ class PHIDTypes(Enum):
 
 
 class PHIDRef(object):
-    __slots__ = ("fromPHID", "toPHID", "object", "relation")
+    __slots__ = ("fromPHID", "toPHID", "toPHIDRef", "object", "relation")
 
     fromPHID: Optional[PHID]
     toPHID: PHID
+    toPHIDRef: PHIDRef
     object: PhabObjectBase
     relation: Optional[PhabObjectBase]
 
-    def __init__(self, toPHID: PHID, fromPHID: Optional[PHID] = None):
+    def __init__(self, toPHID: Union[PHID, PHIDRef], fromPHID: Optional[PHID] = None):
         if isinstance(toPHID, PHIDRef):
-            self.toPHID = toPHID.toPHID
+            if toPHID.fromPHID:
+                self.toPHID = toPHID.fromPHID
+            else:
+                self.toPHID = toPHID.toPHID
+            self.toPHIDRef = toPHID
         else:
             self.toPHID = toPHID
         self.fromPHID = fromPHID
@@ -693,6 +778,9 @@ class PHIDRef(object):
             self.relation = PHObject.instance(fromPHID)
         else:
             self.relation = None
+
+    def target(self):
+        return self.toPHIDRef if self.toPHIDRef else PHIDRef(self.toPHID)
 
     def __repr__(self) -> str:
         if self.fromPHID:
@@ -761,7 +849,7 @@ def sqlite_insert_statement(
     return f"{statement} into {table}({','.join(keys)}) values ({placeholders});"
 
 
-def adapt_datetime(ts: datetime.datetime) -> float:
+def adapt_datetime(ts: datetime) -> float:
     return ts.timestamp()
 
 
@@ -775,7 +863,7 @@ def register_sqlite_adaptors():
         sqlite3.register_adapter(list, sql_encode_json)
         sqlite3.register_adapter(tuple, sql_encode_json)
         sqlite3.register_converter("phid", sql_convert_phid)
-        sqlite3.register_adapter(datetime.datetime, adapt_datetime)
+        sqlite3.register_adapter(datetime, adapt_datetime)
         _registered_adapters = True
         from sqlite_utils.db import COLUMN_TYPE_MAPPING
 
@@ -829,7 +917,7 @@ class PHObjectEncoder(json.JSONEncoder):
 
         if isinstance(o, PHIDRef):
             return o.toPHID
-        if isinstance(o, datetime.datetime):
+        if isinstance(o, datetime):
             return o.isoformat()
         if isinstance(o, sqlite3.Row):
             return [i for i in o]
@@ -884,7 +972,11 @@ class KKVCache(object):
             self.cache[key] = PHIDRef(row["project_phid"], row["column_phid"])
             if isPHID(row["proxyPHID"]):
                 column_proxy = PHIDRef(row["proxyPHID"], row["column_phid"])
+                # forward mapping from parent column to milestone subproject
                 key = (row["column_phid"], "proxyPHID")
+                self.cache[key] = column_proxy
+                # reverse mapping from milestone project to parent proxy column
+                key = (row["proxyPHID"], "proxyPHID")
                 self.cache[key] = column_proxy
 
     def get(self, *args, default=None):
@@ -893,9 +985,9 @@ class KKVCache(object):
     def get_project(self, obj):
         return self.get(obj, "project_phid")
 
-    def get_proxy(self, parent_column):
+    def get_proxy(self, column_or_milestone_phid):
         """Get the project that a proxy column points to"""
-        return self.get(parent_column, "proxyPHID")
+        return self.get(column_or_milestone_phid, "proxyPHID")
 
     def get_default_column(self, project_phid):
         key = (project_phid, "default_column")
@@ -915,9 +1007,12 @@ class KKVCache(object):
         if ptype is ProjectColumn:
             milestone_project = self.get_proxy(phid)
             if milestone_project:
-                res = self.get_default_column(milestone_project)
-                if not res:
-                    res = PHIDRef(milestone_project)
+                default_col = self.get_default_column(milestone_project)
+                if isinstance(default_col, PHIDRef):
+                    res = PHIDRef(default_col, phid)
+                else:
+                    res = milestone_project
+
         elif ptype is Project:
             res = self.get_default_column(phid)
 
@@ -931,7 +1026,7 @@ class types:
     PRIMARYKEY = SQLType("PRIMARYKEY", str, "PRIMARY KEY")
     REAL = SQLType("REAL", float)
     TEXT = SQLType("TEXT", str)
-    timestamp = SQLType("timestamp", datetime.datetime)
+    timestamp = SQLType("timestamp", datetime)
 
 
 class DataCache(object):

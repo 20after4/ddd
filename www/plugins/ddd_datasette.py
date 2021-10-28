@@ -1,17 +1,208 @@
-from pathlib import Path
-
-from ddd import console
-from ddd.phab import Conduit
+import html
 import inspect
+import importlib.util
+import datetime
+from pathlib import Path
 from pprint import pprint
-from typing import Dict, NewType, Type, TypeVar
-from ddd.phobjects import PHID, PHIDRef, PHObject
-from datasette.hookspecs import hookimpl
-from importlib import import_module
+from typing import Dict, Mapping, NewType, Type
+
 from datasette.app import Datasette
-from datasette.database import Database
+from datasette.hookspecs import hookimpl
+from datasette.utils.asgi import Request, Response
+from ddd import console
+
+from ddd.phobjects import PHID
+from jinja2 import Template
+from jinja2.utils import Markup, escape
+
+@hookimpl
+def extra_css_urls():
+    return [
+        {
+            "url": "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css",
+            "sri": "sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3",
+        }
+    ]
+
+
+@hookimpl
+def extra_js_urls():
+    return [
+        {
+            "url": "/static/autocomplete.min.js",
+            "module": True
+        },
+        {
+            "url": "/static/autocomplete.js",
+            "module": True
+        },
+        {
+            "url": "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js",
+            "sri": "sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        }
+    ]
+
+# @hookimpl
+# def extra_body_script():
+#     return {
+#         "module": True,
+#         "script": """import {projectSearcher} from '/static/autocomplete.js';
+#          projectSearcher()"""
+#     }
+
+class DashboardView:
+    pass
+
+class QueryView(DashboardView):
+    pass
+
+
+async def ddd_view(datasette:Datasette, request, scope, send, receive):
+    # TODO: proper error handling: missing model or view should be a 404.
+
+    page = request.url_vars["page"]
+    model_page = page + '.py'
+    views_dir = Path(__file__).parent.parent / "templates" / "views"
+    model_file = views_dir / model_page
+
+    # import the model module
+    spec = importlib.util.spec_from_file_location("module.name", model_file.absolute())
+
+    console.log("Model path:", model_file.absolute())
+    if not spec:
+        raise ImportError()
+    model_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(model_module) # type: ignore
+    model_module.__name__ = f'ddd.model.{page}'
+
+    db = datasette.get_database('metrics')
+    context = {
+        "console": console,
+        "request": request,
+        **request.url_vars
+    }
+    # augment the context with data from the model
+    context = await model_module.init_context( #type: ignore
+        datasette,
+        db,
+        request,
+        context=context)
+    template_name = f"views/{page}.html"
+    console.log('template name: ',template_name)
+    output = await datasette.render_template(template_name, context, request, page)
+    return Response.html(output)
+
+
+@hookimpl
+def register_routes():
+    """return a list of routes, e.g.
+    [ (path_regex, callback), ]
+    """
+
+    def r(*parts, prefix='^/-/'):
+        """Compose a route entry from several path fragments"""
+        return prefix + "/".join(parts) + "/?$"
+    def v(name):
+        """Compose regex fragment that captures one path level as a named variable"""
+        return f"(?P<{name}>[a-zA-Z0-9\\-]+)"
+    def optional(part):
+        """Mark a path segment as optional by wrapping it with ()?"""
+        return f"?(part)?"
+
+
+    return [
+         (r('ddd', v('page'), optional(v('subpage'))), ddd_view)
+    ]
+
+
+def A(href, label, target=None):
+    if target:
+        target = f' target="{target}"'
+    return Markup(
+        '<a class="phid" title="{label}" href="{href}"{target}>{label}</a>'.format(
+            href=escape(href), label=escape(label or "") or "&nbsp;",
+            target=target
+        )
+    )
+
+def getoneof(somedict, listofkeys, default=""):
+    for i in listofkeys:
+        if i in somedict:
+            return somedict[i]
+    return default
+
+def dashboard_link(object):
+    uri = getoneof(object, ['uri','url','href'], "")
+    return A(href=uri, label=object['name'])
+
+# @hookimpl
+# def menu_links(datasette, actor):
+#     if actor and actor.get("id") == "root":
+#         return [
+#             {"href": datasette.urls.path("/-/edit-schema"), "label": "Edit schema"},
+#         ]
+
+
+@hookimpl
+def extra_template_vars(template:str, database:str, table:str, columns:str, view_name:str, request:Request, datasette:Datasette):
+    queries = canned_queries(datasette, database)
+
+    async def execute_sql(sql, args=None, database=None):
+        db = datasette.get_database(database)
+        if sql in queries:
+            sql = queries[sql]
+        return (await db.execute(sql, args)).rows
+
+    return {
+        "sql": execute_sql,
+        "timestamp": datetime.datetime.fromtimestamp,
+        "tsdate": datetime.date.fromtimestamp,
+        "dashboard_link": dashboard_link
+    }
+
+
+def magic_phid(key, request):
+    return 'mmodell'
+
+
+@hookimpl
+def register_magic_parameters(datasette):
+    return [
+        ("phid", magic_phid),
+    ]
+
+
+@hookimpl
+def canned_queries(datasette: Datasette, database: str) -> Mapping[str, str]:
+    # load "canned queries" from the filesystem under
+    #  www/sql/db/query_name.sql
+    queries = {}
+
+    sqldir = Path(__file__).parent.parent / "sql"
+    if database:
+        sqldir = sqldir / database
+
+    if not sqldir.is_dir():
+        return queries
+
+    for f in sqldir.glob('*.sql'):
+        try:
+            sql = f.read_text('utf8').strip()
+            if not len(sql):
+                log(f"Skipping empty canned query file: {f}")
+                continue
+            queries[f.stem] = { "sql": sql }
+        except OSError as err:
+            log(err)
+
+    return queries
+
 
 Query = NewType('Query', str)
+
+
+def log(err):
+    console.log(err)
 
 
 class QueryListBase:
@@ -170,80 +361,3 @@ class MetricsQueryList(QueryList, database='metrics'):
         order by end_ts;
     """)
 
-
-@hookimpl
-def extra_template_vars(datasette: Datasette):
-
-    async def ddd(datasource, args=None):
-        module = import_module(datasource)
-        db = datasette.get_database('metrics')
-        return await (module.run(db, args))
-
-    async def train_stats(version):
-        db = datasette.get_database('train')  # type: Database
-
-        cur = await (
-            db.execute(TrainQueryList.train_properties_for_version, {"version": version})
-        )
-
-        stats = {"participants": {}}
-
-        for idx,key,actor,value in cur.rows:
-            stats['task'] = f'T{idx}' # type: ignore
-            if actor == '*':
-                stats[key] = value
-            else:
-                if key not in stats:
-                    stats[key] = {}
-                stats[key][actor]=PHObject.instance(actor)
-                if key in ('resolvers', 'unblockers', 'commenters'):
-                    if actor in stats['participants']:
-                        stats['participants'][actor] += int(value)
-                    else:
-                        stats['participants'][actor] = int(value)
-
-        cur = await (
-         db.execute(TrainQueryList.train_blockers_joined, {"version": version})
-        )
-
-        for row in cur.rows:
-            stats[row['metric']] = (row['added'], row['removed'], row['count']) # type: ignore
-
-        PHObject.resolve_phids(Conduit())
-        pprint(stats)
-        return stats
-
-    async def instance(phid:PHID):
-        if phid[0:2] == '["' and phid[-2:] == '"]':
-            phid = phid[2:-2] # type: ignore
-        return PHObject.instance(phid)
-
-    return {"ddd": ddd, "train": train_stats, "PHObject": instance}
-
-
-def log(err):
-    console.log(err)
-
-@hookimpl
-def canned_queries(datasette: Datasette, database: str):
-    sqldir = Path(__file__).parent / "sql" / database
-    if not sqldir.is_dir():
-        return None
-
-    queries = {}
-
-    for f in sqldir.glob('*.sql'):
-        try:
-            sql = f.read_text('utf8').strip()
-            if not len(sql):
-                log(f"Skipping empty canned query file: {f}")
-                continue
-            queries[f.stem] = { "sql": sql }
-        except OSError as err:
-            log(err)
-    return queries
-
-
-@hookimpl
-async def render_custom_dashboard_chart(chart_display):
-    return "<h3>test <b>1</b> 2 3</h3>"

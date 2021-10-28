@@ -1,0 +1,40 @@
+{% extends "view.html" %}
+{% block title %}cycle time{% endblock %}
+
+{% block content %}
+<div class='metrics-report'>
+<h2>Mean cycle time:  ~ {{mean_cycle_time }} days</h2>
+ <div class='subhead'>Based on these <strong>{{tasks|length}}</strong> tasks that were started and completed during the period from <strong>{{params['date_start']}}</strong> through <strong>{{params['date_end']}}</strong></div>
+ <table class='table'>
+ <thead>
+ <tr><th>Task</th><th>Points</th><th>Created</th><th>Started</th><th>Disposition</th><th colspan='2'></th></tr>
+ <tr><th colspan='2'>&raquo; Title</th><th>Modified</th><th>Ended</th><th>Lead Time</th><th>Cycle Time</th><th>Proportion of Mean</th>
+ </tr></thead>
+
+{% for task in tasks %}
+{% set data = task['data']%}
+<tbody class='task'>
+  <tr>
+  <td>T{{task['id']}}</td>
+  <td>{{data['points'] or 0}}</td>
+  <td>{{tsdate(data.get('dateCreated', 0))}}</td>
+  <td>{{task['start'].date()}}</td>
+  <td>{% if task['state'] %}{{task['state']}}{% endif %}</td><td colspan='2'></td>
+  </tr><tr>
+  <td colspan='2'> <a href="https://phabricator.wikimedia.org/T{{task['id']}}">&raquo; {{task['data']['name']}}</a></td>
+  <td>{{tsdate(data.get('dateModified', 0))}}</td>
+  {% if task['end'] %}
+  <td>{{task['end'].date()}}</td>
+  <td>{{(task['end'] - timestamp(data.get('dateCreated', 0))).days}} days.</td>
+  <td>{{task['duration'].days}} days</td>
+  <td title="({{task['duration'].days}}&divide;{{mean_cycle_time}}) * 100">{{round((task['duration'].days / mean_cycle_time) * 100, 1) }}%</td>
+  {%else%}
+  <td colspan='3'></td>
+  {% endif %}
+  </tr>  </tbody>
+{% endfor %}
+
+</table>
+</div>
+
+{% endblock %}

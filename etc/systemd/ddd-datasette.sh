@@ -1,0 +1,1 @@
+datasette --reload --metadata www/metadata.yaml -h 0.0.0.0 -p 8001  www

@@ -6,13 +6,14 @@ import pathlib
 import sqlite3
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pprint import pprint
 from sqlite3 import Connection
 from typing import Iterable, Optional, Sized
 
 import click
 from rich.console import Console
+from ddd import console
 import typer
 from rich.status import Status
 from sqlite_utils.db import Database, chunks
@@ -21,7 +22,7 @@ from typer import Option, Typer
 from ddd.boardmetrics_mapper import maptransactions
 from ddd.boardmetrics_schema import Config, config
 from ddd.phab import Conduit
-from ddd.phobjects import PHID, PHObject, PHObjectEncoder, init_caches
+from ddd.phobjects import PHID, DataCache, PHObject, PHObjectEncoder, Project, init_caches
 
 thisdir = pathlib.Path(__file__).parent
 mock_default = thisdir / ".." / "test" / "transactions.json"
@@ -31,9 +32,15 @@ all_tables = ["columns", "events", "column_metrics", "task_metrics", "phobjects"
 cli = Typer(callback=config, no_args_is_help=True, invoke_without_command=True)
 
 
-def cache_tasks(conduit, cache, tasks, sts):
-    r = conduit.maniphest_search(constraints={"ids": tasks})
-    r.fetch_all(sts)
+def cache_tasks(conduit:Conduit, cache:DataCache, tasks:list, sts):
+    ids =  ', '.join(tasks)
+    with cache.con as db:
+        rows = db.execute(f'select id from Task where id in ({ids})')
+        already_cached_ids = set([row[0] for row in rows])
+        uncached_ids = set(tasks) - already_cached_ids
+
+        r = conduit.maniphest_search(constraints={"ids": uncached_ids})
+        r.fetch_all(sts)
 
     new_instances = []
     for task in r.data:
@@ -44,15 +51,29 @@ def cache_tasks(conduit, cache, tasks, sts):
     # cache.store_all(r.data)
 
 
-def cache_projects(conduit: Conduit, cache, sts):
-    r = conduit.project_search(constraints={"maxDepth": 2})
+def cache_projects(conduit: Conduit, cache, sts, project):
 
-    r.fetch_all(sts)
+    def store_projects(r):
+        r.fetch_all(sts)
 
-    for project in r.data:
-        project.save()
+        for p in r.data:
+            # console.log(p.data)
+            p.save()
 
-    cache.store_all(r.data)
+        cache.store_all(r.data)
+
+    if project == 'all':
+        r = conduit.project_search(constraints={"maxDepth": 2})
+        store_projects(r)
+    else:
+        if not isinstance(project, list):
+            r = conduit.project_search(constraints={"ancestors": [project]})
+            store_projects(r)
+            project = [project]
+        r = conduit.project_search(constraints={"phids": project})
+        store_projects(r)
+
+
 
 
 @cli.command()
@@ -73,6 +94,8 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
     with config.console.status("[bold green]Fetching more pages...") as sts:
         r.fetch_all(sts)
 
+    proxy_phids = []
+
     with config.console.status(
         "[bold green]Saving to sqlite..."
     ) as sts, config.db.conn as conn:
@@ -81,6 +104,8 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
         for col in r.data:
             count += 1
             col.save()
+            if col['proxyPHID']:
+                proxy_phids.append(col['proxyPHID'])
             # col.project.save()
             if round((count / total) * 100) > pct:
                 pct = round((count / total) * 100)
@@ -95,7 +120,9 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
     PHObject.resolve_phids(config.phab, cache)
 
     with config.console.status("[bold green]Fetching projects") as sts:
-        cache_projects(config.phab, cache, sts)
+        cache_projects(config.phab, cache, sts, project)
+        cache_projects(config.phab, cache, sts, proxy_phids)
+
 
 
 @cli.command()
@@ -105,6 +132,9 @@ def map(
     task_ids: Optional[str] = Option(None),
     mock: Optional[str] = Option(None),
     cache_objects: Optional[bool] = Option(False),
+    linear: Optional[bool] = Option(False),
+    after: Optional[int] = Option(0),
+    pages: Optional[int] = Option(1),
 ):
     """Gather workboard metrics from Phabricator"""
     config = ctx.meta["config"]  # type: Config
@@ -113,6 +143,8 @@ def map(
     db_path = config.db_path
     console = config.console
     project_phid = project
+
+    all_projects:set[Project]
 
     try:
         kvcache, cache = init_caches(db, phab)
@@ -129,27 +161,59 @@ def map(
             with io.open(mock) as jsonfile:
                 transactions = json.load(jsonfile)
                 transactions = transactions["result"]
-        else:
-            if not project_phid:
-                return False
-            console.log(
-                f"Fetching tasks and transactions for the project [bold blue]{project_phid}[bold blue]"
+        elif linear:
+            task_ids = []
+            arg={
+                "queryKey":"all",
+                "order": ['id'],
+                "attachments": {
+                    "projects": True
+                },
+                "limit":100
+            }
+            if after:
+                arg['after'] = after
+            r = phab.request("maniphest.search", arg
             )
+            if pages and pages > 1:
+                for i in range(pages):
+                    console.log("Fetching next page", r.cursor)
+                    r.next_page()
 
-            arg = {"project": project, "task_ids": task_ids}
+            for task in r.data:
+                task_ids.append(task.id)
+                task.save()
+
+        if not project_phid and not task_ids:
+            console.log("Either A project phid or a list of tasks are required.")
+            return False
+
+        console.log(
+            f"Fetching tasks and transactions for the project [bold blue]{project_phid}[bold blue]"
+        )
+
+        if project_phid:
+            arg = {"project": project_phid, "task_ids": task_ids}
             arg = {k: arg[k] for k in ("project", "task_ids") if arg[k] is not None}
+
             r = phab.request(
                 "maniphest.project.task.transactions",
                 arg,
             )
-            transactions = r.result
+        else:
+            r = phab.request(
+                "maniphest.gettasktransactions",
+                {"ids": task_ids},
+            )
+
+        transactions = r.result
 
     # now collect all of the formatted transaction details
     with db.conn as conn, console.status(
         "Processing  [bold blue]transactions[/bold blue]..."
     ) as sts:
         conn  # type: Connection
-        datapoints, metrics, all_metrics, taskids = maptransactions(
+        datapoints, all_projects, all_metrics, taskids = maptransactions(
             project_phid, transactions, conn, console, phab, sts, kvcache
         )
 
@@ -164,9 +228,15 @@ def map(
     with console.status("[bold green]Processing task_metrics...") as sts:
         task_metric_rows = []
         for metric in all_metrics:
-            if metric.last:
-                metric.end(datetime.now().timestamp())
+            #if metric.last:
+            #    metric.end(datetime.now().timestamp())
+            last_ended_at = None
             for span in metric.spans:
+                if last_ended_at and last_ended_at >= span.start:
+                    span.start = last_ended_at + timedelta(seconds=1)
+
+                if not span.end or span.end == 0 or span.end <= span.start:
+                    span.end = span.start + timedelta(seconds=1)
                 row = (
                     metric.task,
                     metric.value,
@@ -175,6 +245,7 @@ def map(
                     span.end,
                     span.duration(),
                 )
+                last_ended_at = span.end
                 task_metric_rows.append(row)
 
     load_data_with_progress(
@@ -185,8 +256,14 @@ def map(
         task_metric_rows,
     )
 
+    # for proj in all_projects:
+    #     console.log(proj)
+    #     for metric in proj.all_metrics().values():
+    #         console.log(metric)
+
     with console.status("Updating [bold]phobjects[/bold].") as sts:
-        cache_tasks(config.phab, cache, taskids, sts)
+        if not linear:
+            cache_tasks(config.phab, cache, taskids, sts)
         PHObject.resolve_phids(config.phab, cache)
     console.log("Updated phobjects. All done!")
 

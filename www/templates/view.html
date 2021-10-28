@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block nav %}
+ <div class="container-md">
+    <a class="nav-link" href="{{ urls.instance() }}">Data³</a>
+    <a class="nav-link"  href="{{ urls.path('-/dashboards/project-metrics') }}">Phabricator Metrics</a>
+    <a class="nav-link"  href="{{ urls.database('metrics') }}">Explore</a>
+    </div>
+    {{ super() }}
+{% endblock %}
