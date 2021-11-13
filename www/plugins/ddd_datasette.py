@@ -28,16 +28,12 @@ def extra_css_urls():
 
 
 @hookimpl
-def extra_js_urls():
+def extra_js_urls(datasette):
     return [
-        {
-            "url": "/static/autocomplete.min.js",
-            "module": True
-        },
-        {
-            "url": "/static/autocomplete.js",
-            "module": True
-        },
+        # {
+        #     "url": datasette.urls.path("static/build/autocomplete.js"),
+        #     "module": True
+        # },
         {
             "url": "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js",
             "sri": "sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
@@ -46,11 +42,11 @@ def extra_js_urls():
 
 # @hookimpl
 # def extra_body_script():
-#     return {
-#         "module": True,
-#         "script": """import {projectSearcher} from '/static/autocomplete.js';
-#          projectSearcher()"""
-#     }
+#  return {
+#      "module": True,
+#      "script": """import {projectSearcher} from '/static/build/autocomplete.js';
+#       projectSearcher()"""
+# }
 
 class DashboardView:
     pass
@@ -79,6 +75,7 @@ async def ddd_view(datasette:Datasette, request, scope, send, receive):
 
     db = datasette.get_database('metrics')
     context = {
+        "base_url": datasette.urls.path('/'),
         "console": console,
         "request": request,
         **request.url_vars
@@ -109,11 +106,11 @@ def register_routes():
         return f"(?P<{name}>[a-zA-Z0-9\\-]+)"
     def optional(part):
         """Mark a path segment as optional by wrapping it with ()?"""
-        return f"?(part)?"
+        return f"?({part})?"
 
 
     return [
-         (r('ddd', v('page'), optional(v('subpage'))), ddd_view)
+         (r('ddd', v('page'), optional(v('slug'))), ddd_view)
     ]
 
 
@@ -159,7 +156,7 @@ def extra_template_vars(template:str, database:str, table:str, columns:str, view
         return (await db.execute(sql, args)).rows
 
     def icon(name, size=24):
-        return Markup(f'<svg class="icon{size}"><use xlink:href="/static/icons.svg#icon-{name}"></svg>')
+        return Markup(f'<svg class="icon{size}" style="width:{size};height:{size}"><use xlink:href="{datasette.urls.path("/static/icons.svg")}#icon-{name}"></svg>')
 
     return {
         "sql": execute_sql,

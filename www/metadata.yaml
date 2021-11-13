@@ -27,11 +27,12 @@ plugins:
           type: text
         column:
           name: column
-          type: hidden
+          type: text
         date:
           name: Date range
           type: daterange
-          default: ["-1 year", "now"]
+          default: ["start_of_quarter", "now"]
+
       charts:
         task-details:
           title: Task details
@@ -76,29 +77,61 @@ plugins:
             encoding:
               x: { field: duration_days, type: quantitative, title: 'Days in column' }
               y: { field: column_name, type: nominal, title: 'Column'  }
-        project-columns:
+        most-active-projects:
+          title: Most popular projects (by number of tasks per week)
           db: metrics
+          section: disabled
+          requires: [ -project, -task_id]
           query: |-
             SELECT
-              c.*,
-              p.status as projectStatus,
-              p.uri as projectURI
-            FROM ProjectColumn c
-            LEFT JOIN
-              Project p on c.proxyPHID=p.phid
-            WHERE c.project=:project
-              AND cast(c.status as int) = 0
-              AND p.status != 'closed'
-          library: jinja
-          template: project_columns.html
-          requires: [ project, -task_id ]
-          section: top
-          columns: 12
+              DISTINCT metric AS project_phid,
+              m.state,
+              p.label AS project_name,
+              p.root as root,
+              COUNT(DISTINCT task) AS tasks,
+              w.date AS week
+            FROM
+              task_metrics m
+              JOIN ActiveProjectsCache p ON p.phid = m.metric and state='tagged'
+              JOIN weeks w ON w.date=DATE(ts,'unixepoch','weekday 0', '-7 days')
+            WHERE TRUE
+            [[ AND w.date >= date(:date_start) ]]
+            [[ AND w.date <= date(:date_end) ]]
+            AND project_name != 'Patch-For-Review'
+            GROUP BY
+              root, week
+            HAVING tasks > 20
+            ORDER BY
+              week DESC,
+              tasks DESC;
+          library: vega
+          display:
+            height: 350
+            autosize: { "type": "fit-x", "contains": "padding" }
+            mark:
+              type: bar
+              tooltip: true
+              baseline: bottom
+              line: true
+            encoding:
+              size:
+                value: 12
+              x:
+                field: week
+                type: temporal
+              color:
+                field: project_name
+                type: nominal
+                scale:
+                  scheme: "category20c"
+              y:
+                field: tasks
+                type: quantitative
         column-metrics:
           title: Tasks added & removed from columns, weekly.
           db: metrics
           requires: [ project, -column, -task_id ]
-          section: default
+          section: disabled
           columns: 6
           query: |-
             select
@@ -172,35 +205,42 @@ plugins:
           columns_max: 12
           cardorder: last
           query:
-            SELECT distinct
-                count(distinct task) as value,
-                ph.name as state,
-                state as realstate,
-                ph.phid as state_phid,
-                w.date as week,
-                m.metric as project,
-                date(m.ts, 'unixepoch') as ts,
-                date(m.ts2, 'unixepoch') as ts2
-              FROM
-                task_metrics m
-                JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
-                JOIN (select distinct date from weeks) w on date(w.date) >= date(m.ts, 'unixepoch')
-            WHERE
-            TRUE
-              [[AND  project=:project  ]]
-              [[AND state=:column ]]
-            AND  state not in ('created','tagged','untagged')
-            and (not state like 'PHID-PROJ-%')
-            AND week >= date(:date_start)
-            AND week <= date(:date_end)
-              GROUP BY
-                state_phid,
-                date(week)
-              ORDER BY
-                m.ts
+            SELECT
+              distinct count(distinct task) as value,
+              ph.name as state_name,
+              ph.phid as state_phid,
+              w.date as week,
+              m.metric as project,
+              max(date(m.ts, 'unixepoch')) as ts,
+              max(date(m.ts2, 'unixepoch')) as ts2
+            FROM
+              task_metrics m
+              JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
+              JOIN (
+                select
+                  distinct date
+                from
+                  weeks
+              ) w on date(w.date) >= date(m.ts, 'unixepoch')
+            WHERE TRUE
+               AND date(m.ts, 'unixepoch') >= date(:date_start)
+              AND project = :project
+              AND state not in ('created', 'tagged', 'untagged')
+              and (not state like 'PHID-PROJ-%')
+               AND week >= date(:date_start)
+               AND week <= date(:date_end)
+            GROUP BY
+              state_name,
+              week
           library: vega
           display:
-            height: 400
+            height: 300
+            params:
+              - name: brush
+                select: { type: interval, resolv: global }
+              - name: column
+                select: { type: interval  }
+                bind: legend
             mark: { type: area, tooltip: true, clip: true}
             encoding:
               x:
@@ -212,15 +252,15 @@ plugins:
                 field: value
                 type: quantitative
               color:
-                field: state
+                field: state_name
                 type: nominal
                 scale:
-                  scheme: category20
+                  scheme: category20c
         chill:
           title: Chill Chart
           db: metrics
           requires: [ project, -task_id ]
-          section: default
+          section: disabled
           columns: 6
           columns_max: 12
           cardorder: last
@@ -256,7 +296,7 @@ plugins:
                 m.ts
           library: vega
           display:
-            height: 400
+            height: 300
             mark: { type: bar, tooltip: true, clip: true, size: 25}
             encoding:
               x:
@@ -271,7 +311,7 @@ plugins:
                 field: state
                 type: nominal
                 scale:
-                  scheme: category20
+                  scheme: category20c
         states:
           title: Status changes
           db: metrics
@@ -296,14 +336,13 @@ plugins:
             from
               events e
             where '' != :project
-            [[AND cast(e.task as INTEGER) in (select distinct cast(task as INTEGER) as task from task_metrics where metric=:project)]]
+            AND cast(e.task as INTEGER) in (select distinct cast(task as INTEGER) as task from task_metrics where metric=:project)
             and old_new is not null
             and event in ('status')
-            [[AND month >= date(:date_start) ]]
-            [[AND month <= date(:date_end) ]]
+            AND month >= date(:date_start)
+            AND month <= date(:date_end)
             group by month, old_new
             order by month
-
           library: vega
           display:
             width: 110
@@ -316,18 +355,20 @@ plugins:
               #   encoding:
               #     x: { field: day, type: temporal}
               #     y: { field: count, type: quantitative }
+            params:
+              - name: "highlight"
+                select: {"type": "point"}
             mark:
               type: point
               filled: true
               tooltip: true
               strokeWidth: 1
               stroke: black
-
             encoding:
                 size:
                   field: count
                   type: quantitative
-                  scale: { type: symlog, constant: 1 }
+                  #scale: { type: symlog, constant: 1 }
                   legend: { direction: vertical, orient: right }
                 color:
                   field: old_new
@@ -338,17 +379,179 @@ plugins:
                     columns: 4,
                     symbolLimit: 20
                   }
-                  scale: { scheme: 'category20' }
+                  scale: { scheme: 'category20c' }
                 y: { field: old, type: nominal, axis: {grid: true, tickBand: "extent"}}
                 x: { field: new, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                stroke:
+                  condition:
+                    param: "highlight"
+                    empty: false
+                    value: black
+                  value: null
+                facet: { field: month, columns: 3, type: temporal}
+        columns:
+          title: column changes
+          db: metrics
+          requires: [ project, -task_id ]
+          section: default
+          cardorder: first
+          columns: 4
+          columns_max: 6
+          query:
+            select
+              e.project as project_phid,
+              date(ts, 'unixepoch') as day,
+              date(ts, 'unixepoch', 'start of month') as month,
+              count(task) as count,
+              c.name as old,
+              n.name as new,
+              c.name||'->'||n.name as old_new
+            from
+              events e
+              join ProjectColumn c on e.old = c.phid
+              join ProjectColumn n on e.new = n.phid
+            where
+              event = "columns"
+               AND month >= date(:date_start)
+               AND month <= date(:date_end)
+              AND e.project=:project
+            group by
+              project_phid,
+              month,
+              old_new
 
+          library: vega
+          display:
+            width: 110
+            height: 90
+            params:
+              - name: "highlight"
+                select: {"type": "point"}
+            mark:
+              type: point
+              filled: true
+              tooltip: true
+              strokeWidth: 1
+              stroke: black
+            encoding:
+                size:
+                  field: count
+                  type: quantitative
+                  legend: { direction: vertical, orient: right }
+                color:
+                  field: old_new
+                  type: nominal
+                  legend: {
+                    direction: horizontal,
+                    orient: bottom,
+                    columns: 4,
+                    symbolLimit: 20
+                  }
+                  scale: { scheme: 'category20c' }
+                y: { field: old, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                x: { field: new, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                stroke:
+                  condition:
+                    param: "highlight"
+                    empty: false
+                    value: black
+                  value: null
                 facet: { field: month, columns: 3, type: temporal}
 
+        time_in_columns:
+          title: Average time tasks remain, per column
+          db: metrics
+          requires: [ project, -task_id ]
+          section: default
+          columns: 6
+          columns_max: 12
+          cardorder: last
+          query:
+            select
+              task,
+              count(*) as count,
+              state,
+              c.name as column_name,
+              date(ts, 'unixepoch') as date_start,
+              date(ts2, 'unixepoch') as date_end,
+              date(ts2, 'unixepoch', 'start of month') as month,
+              cast(avg(duration)/(60*60*24) as int) as days
+            from
+              task_metrics m
+              join ProjectColumn c on c.phid = m.state
+            where
+              metric in (
+                select
+                  phid
+                from
+                  (
+                    WITH RECURSIVE pp(phid, name, path, root) AS (
+                      SELECT
+                        phid,
+                        name,
+                        name AS path,
+                        phid as root
+                      FROM
+                        Project
+                      WHERE
+                        parent is null
+                        and status = 'open'
+                      UNION ALL
+                      SELECT
+                        Project.phid,
+                        Project.name AS name,
+                        pp.path || ':' || Project.name as path,
+                        pp.root as root
+                      FROM
+                        Project
+                        JOIN pp ON Project.parent = pp.phid
+                        and status = 'open'
+                    )
+                    SELECT
+                      pp.path AS path,
+                      pp.root as root,
+                      Project.fullName AS label,
+                      Project.name as name,
+                      Project.phid AS key,
+                      Project.phid as phid,
+                      Project.parent as parent,
+                      Project.uri AS href,
+                      Project.depth AS depth,
+                      Project.slug as slug
+                    FROM
+                      Project
+                      JOIN pp ON Project.phid = pp.phid
+                      and status = 'open'
+                    ORDER BY
+                      path
+                  )
+                where
+                  root = :project
+              )
+            group by
+              state
+            order by
+              days
+          library: vega
+          display:
+            height: 480
+            mark: { type: bar, tooltip: true, clip: true, size: 12}
+            encoding:
+              x:
+                field: days
+                type: quantitative
+              y:
+                field: column_name
+                type: nominal
+                sort: -x
+              color:
+                field: column_name
+                type: nominal
+                scale:
+                  scheme: category20c
 
-            # - mark: { type: errorband, extent: ci, opacity: 0.5}
-              #   encoding:
-              #     x: { field: day, type: temporal}
-              #     y: { field: count, type: quantitative, aggregate: mean}
+
+
 
 databases:
   metrics:
@@ -549,7 +752,23 @@ databases:
         title: test title 123
         sql: SELECT * from task_metrics where task=:task_id
         #sql: SELECT * from Project where name=:project_name
-
+      task_any_assignee:
+        title: All tasks assigned to user in any capacity
+        sql: |-
+          select
+            u.name as user,
+            'T' || t.id as task,
+            t.name as title,
+            t.status,
+            t.dateModified,
+            t.points,
+            t.subtype,
+            t.dateClosed
+          from
+            Task t
+            join phobjects u on u.phid in (ownerPHID, [custom.train.backup])
+          where
+            u.name like :user
 
 extra_css_urls:
   - /static/styles.css

@@ -14,7 +14,12 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
 <div class="not-footer">
-<header><nav class='navbar sticky-top  nav navbar-dark'>{% block nav %}
+<header><nav class='navbar navbar-expand-lg navbar-dark'>
+  <div class="container-fluid">
+
+
+
+  {% block nav %}
     {% set links = menu_links() %}{% if links or show_logout %}
     <details class="nav-menu">
         <summary><svg aria-labelledby="nav-menu-svg-title" role="img"
@@ -43,7 +48,9 @@
         <strong>{{ display_actor(actor) }}</strong>
     </div>
     {% endif %}
-{% endblock %}</nav></header>
+{% endblock %}
+</div>
+</nav></header>
 
 {% block messages %}
 {% if show_messages %}

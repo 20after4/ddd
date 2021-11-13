@@ -1,13 +1,19 @@
 {
   "compilerOptions": {
-    "module": "es2015",
-    "target": "es2015",
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "module": "es2020",
+    "target": "es2020",
     "jsx": "preserve",
     "strictFunctionTypes": true,
+    "skipLibCheck": true,
     "sourceMap": true,
-    "baseUrl": "./www",
+    "baseUrl": "./www/",
+    "moduleResolution": "node",
     "paths": {
-        "static/*": ["static/*"],
+        //"build/*":["static/build/*"],
+        "*": ["static/build/_snowpack/pkg/*", "static/build/*", "../node_modules/*", "node_modules/*","*"]
     },
   },
 }

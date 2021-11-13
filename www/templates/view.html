@@ -1,9 +1,12 @@
 {% extends "base.html" %}
+{% block extra_head %}
+<script src="{{base_url}}static/require.js" data-main='{{base_url}}static/app.js'></script>
+{% endblock %}
 {% block nav %}
- <div class="container-md">
+<div class="navbar-nav">
     <a class="nav-link" href="{{ urls.instance() }}">Data³</a>
-    <a class="nav-link"  href="{{ urls.path('-/dashboards/project-metrics') }}">Phabricator Metrics</a>
+    <a class="nav-link"  href="{{ urls.path('-/ddd/dashboard/project-metrics') }}">Phabricator Metrics</a>
     <a class="nav-link"  href="{{ urls.database('metrics') }}">Explore</a>
-    </div>
-    {{ super() }}
+</div>
+
 {% endblock %}

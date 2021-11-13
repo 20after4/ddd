@@ -8,7 +8,7 @@ module.exports = function(grunt) {
       },
       "default": {
         "files": {
-          "www/static/icons.svg": ["www/static/icons/*.svg"]
+          "www/static/icons.svg": ["www/src/icons/*.svg"]
         }
       }
     }

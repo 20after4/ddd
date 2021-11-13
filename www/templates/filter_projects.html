@@ -1,28 +1,14 @@
 {% set project = data[0] if data else None %}
-<div class='filter_projects mt-2'>
-{% if False %}
-  <div class='row-reverse align-items-start'>
+<div class='filter_projects'>
 
-      <div class='position-absolute'>
-        <button type="button" class="btn-close" aria-label="Close"><a class="stretched-link" href="?{{alter_query_url(request.query_string, {'project':''} )}}"></a></button>
-      </div>
-      <h5 class='ms-4 my-0'>{{project.name}}</h5>
-    {% if project.slug %}
-    <div class="row align-items-middle">
-      <div class='col-3 ms-4 my-0 align-self-center'>#{{project.slug}}</div>
-    </div>
-    {%endif%}
-  <a href="/-/ddd/cycletime?project={{project.phid}}&date_start={{query_parameters['date_start']}}&date_end={{query_parameters['date_end']}}">Cycle Time Report</a>
-  </div>
-{% else %}
 <div id="autocomplete" class="autocomplete">
   <input class="autocomplete-input" value="{{project.name}}" name='project_name' id='project_name' placeholder="Enter project name or #hashtag">
   <ul class="autocomplete-result-list"></ul>
   <input type='hidden' name='project' id='project' value="{% if filter_key in query_parameters.keys() %}{{ query_parameters[filter_key] }}{%elif project%}{{project.phid}}{% else %}{{ filter.default }}{% endif %}">
 </div>
-{%endif%}
+
 <script type="module">
-  import {projectSearcher} from '/static/autocomplete.js';
-  projectSearcher()
+//  import {Autocomplete} from '{{base_url}}/static/build/autocomplete.js';
+//  projectSearcher()
 </script>
 </div>

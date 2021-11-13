@@ -1,13 +1,26 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from typing import DefaultDict
 from datasette.app import Datasette
 from datasette.database import Database
 from datasette.utils.asgi import Request
+from statistics import median, mean
 import pandas as pd
 
 async def init_context(datasette:Datasette, db:Database, request:Request, context):
     params = {k:request.args.get(k) for k in request.args}
+    context['params'] = params
+
+    if 'date_start' not in params:
+        dt = date.today()
+        m = dt.month
+        start_of_quarter = (3*((m-1)//3)+1)
+        params['date_start'] = dt.strftime(f'%Y-{start_of_quarter}-01')
+
+    if 'date_end' not in params:
+        dt = date.today()
+        params['date_end'] = dt.strftime(f'%Y-%m-%d')
+
     sql = """
         select
             task,
@@ -58,11 +71,17 @@ async def init_context(datasette:Datasette, db:Database, request:Request, contex
             start_date asc
     """
 
-    context['console'].log(sql, params)
 
+    #context['console'].log(sql, params)
+    if ('project' not in params):
+        context['messages'] = 'Please select a project'
+        return context
+
+    project_name = await db.execute('select fullName from Project where phid=:phid', {'phid': params['project']})
     context['metrics'] = await db.execute(sql, params)
 
-
+    for row in project_name:
+        context['project_name'] = row['fullName']
 
     now = datetime.now()
     def taskentry():
@@ -94,7 +113,9 @@ async def init_context(datasette:Datasette, db:Database, request:Request, contex
         task['rows'].append(obj)
     total_duration = timedelta(days=0)
     count = 0
-    included_tasks = []
+    included_tasks = {}
+    durations = []
+
     for taskid, task in tasks.items():
         task['id'] = taskid
         if task['end'] == now or task['end'] <= task['start']:
@@ -102,8 +123,11 @@ async def init_context(datasette:Datasette, db:Database, request:Request, contex
         if task['end'] and task['start']:
             if (task['start'] >= datetime.fromisoformat(params['date_start'])
               and task['end'] <= datetime.fromisoformat(params['date_end'])):
-                included_tasks.append(task)
+                included_tasks[taskid]=task
                 task['duration'] = task['end'] - task['start']
+
+                durations.append(task['duration'])
+
                 if total_duration:
                     total_duration += task['duration']
                     count += 1
@@ -112,23 +136,56 @@ async def init_context(datasette:Datasette, db:Database, request:Request, contex
                     count = 1
     if count == 0:
         count = 1
-    context['params'] = params
+
     context['mean_cycle_time'] = round(total_duration.days / count, 1)
+    if len(durations):
+        context['median_cycle_time'] = round(median(durations).days, 1)
+    else:
+        context['median_cycle_time'] = 0
+
+    leadtimes = []
+    leadtimes_sparse = []
     context['int'] = int
     context['round'] = round
-    tids = ", ".join([str(t) for t in tasks.keys()])
+    tids = ", ".join([str(t) for t in included_tasks.keys()])
     details = await db.execute(f'select * from Task where id in({tids})')
     for row in details:
         id = row['id']
         policy = json.loads(row['policy'])
         if (policy['view'] != 'public'):
-            tasks[id]['data'] = {}
+            included_tasks[id]['data'] = {}
+            del(included_tasks[id])
             continue
 
-        data = tasks[id]['data']
+        data = included_tasks[id]['data']
+
+
         for col in details.columns:
             data[col] = row[col]
-    df=pd.DataFrame.from_records(data=included_tasks)
-    print(df)
+
+        if data.get('dateCreated', 0) > 0:
+            dateCreated = data.get('dateCreated', 0)
+            print(dateCreated)
+            if included_tasks[id]['end']:
+                lead = included_tasks[id]['end'] - datetime.fromtimestamp(dateCreated)
+                lead = lead.days+(lead.seconds/(3600*24))
+                leadtimes.append(lead)
+                leadtimes_sparse.append(lead)
+            else:
+                lead = 0
+                leadtimes_sparse.append(0)
+            included_tasks[id]['lead'] = round(lead)
+        else:
+            del(included_tasks[id])
+            #included_tasks[id]['lead'] = included_tasks[id]['duration'].days
+    #df=pd.DataFrame.from_records(data=included_tasks)
+    #print(df)
+    if (len(leadtimes) and len(leadtimes_sparse)):
+        context['median_lead_time'] = round(median(leadtimes), 1)
+        context['mean_lead_time'] = round(mean(leadtimes_sparse), 1)
+    else:
+        context['median_lead_time'] = 0
+        context['mean_lead_time'] = 0
+    included_tasks = [row for row in included_tasks.values() if row['data']]
     context['tasks'] = included_tasks
     return context

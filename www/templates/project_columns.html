@@ -1,24 +1,25 @@
+<div class="row menu-row">
+<a href="{{base_url}}/-/ddd/cycletime/?{{build_url(query_parameters)}}">{{icon('journal-text')}} Cycle Time Report </a>
+</div>
 <div class='row'>
-<a href="/-/ddd/cycletime/?{{build_url(query_parameters)}}">{{icon('journal-text')}} Cycle Time Report </a>
-<div class='dashboard-card-title'>Columns</div>
-<div id='chart-{{slug}}' class='row nav-columns'>
+    <div id='chart-{{slug}}' class='row nav-columns'>
   {% for column in data %}
-  <div class='workboard-column-filter col border shadow-sm p-2 mb-1'>
+    <div class='workboard-column-filter col border shadow-sm p-2 mb-1'>
       <h6>
       {% if query_parameters['column'] == column.phid %}
-      <a href="?{{ alter_query_url(query_string, {'column': ''} ) }}">{{icon('x-cirlce')}}</a>
+      <a href="?{{ alter_query_url(query_string, {'column': ''} ) }}"> {{icon('x-circle')}}</a>
       {% else %}
       <a href="?{{ alter_query_url(query_string, {'column': column.phid} ) }}">{{icon('filter-circle')}}</a>
       {% endif %}
       {% if column.proxyPHID %}
-      <a href="?{{ alter_query_url(query_string, {'project': column.proxyPHID} ) }}">{{icon('box-arrow-in-right')}}{{column.name}}</a>
+      <a href="?{{ alter_query_url(query_string, {'project': column.proxyPHID} ) }}">{{icon('box-arrow-in-right')}} {{column.name}}</a>
       {% elif column.projectURI %}
       <a href="{{column.projectURI}}">{{ column.name }}</a>
       {% else %}
       {{ column.name }}
       {% endif %}
       </h6>
-  </div>
+    </div>
   {% endfor %}
+  </div>
 </div>
-

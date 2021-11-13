@@ -1,0 +1,63 @@
+
+{% extends "view.html" %}
+
+{% block extra_head %}
+<script src="{{base_url}}static/require.js" data-main='{{base_url}}static/app.js'></script>
+{% endblock %}
+{% block content %}
+
+
+
+
+
+
+<dashboard-app id='dashboard'>
+
+<data-source id='dashboard-queries'>
+  <static-data-set id='ds-project_tree'
+  url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400">
+  </static-data-set>
+{% for id, chart in dashboard.charts.items() %}
+<data-set db='{{chart.db}}' id='ds-{{id}}' url='{{base_url}}{{chart.db}}.json?_shape=objects'>{{chart.query}}</data-set>
+{% endfor %}
+
+</data-source>
+<form id='form_{{id}}'>
+<div class="container-fluid p-0 dashboard-filters">
+
+
+
+
+
+  <autocomplete-filter id='project'></autocomplete-filter>
+
+  <input-filter id='task_id' label='Task' style='display:none'></input-filter>
+  <input-filter id='column' label='Column' style='display:none'></input-filter>
+
+  <daterange-filter id='date'>
+  </daterange-filter>
+
+  <div id="filter-group-buttons" class="col-sm-1 align-self-center align-items-center col-auto">
+    <input type="submit" value="Update" class="button">
+  </div>
+
+  </div>
+</form>
+
+<nav-tabs id='tabs'>
+    <tab-item id='columns' value='1' class='active' label='Columns & Milestones'>
+      {% for id, chart in dashboard.charts.items() %}
+      {% if chart.library=='vega' and chart.section == 'default' %}
+      <vega-chart data-source='ds-{{id}}' id='vega-chart-{{id}}' title="{{chart.title}}">
+        <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
+      </vega-chart>
+      {%endif%}
+      {% endfor %}
+    </tab-item>
+    <tab-item id='cycle' value='0' label='Lead & Cycle Time'></tab-item>
+  </nav-tabs>
+</dashboard-app>
+
+
+
+{% endblock %}

@@ -1,14 +1,20 @@
+import Autocomplete from '@trevoreyre/autocomplete-js/dist/autocomplete.esm.js'
 
-import {Autocomplete} from './autocomplete.min.js';
-
-
+async function findTasks(tasks:string) {
+  var ids = tasks.split(' ');
+  var id_str = ids.map(id => "'" + id + "'").join(",")
+  var query = `/metrics/Task.json??sql=select+name%2C+status%2C+phid%2C+dateCreated%2C+dateModified%2C+description%2C+authorPHID%2C+ownerPHID%2C+priority%2C+points%2C+subtype%2C+closerPHID%2C+dateClosed%2C+[custom.points.final]%2C+[custom.deadline.start]%2C+id%2C+type%2C+attachments+from+Task+WHERE+id+in+(${id_str})+order+by+dateModified&_shape=objects&_size=max`
+  const response = await fetch(query);
+  const fetched = await response.json();
+  return fetched;
+}
 
 function projectSearcher() {
 
   var projects = [];
 
   async function fetchProjectsJSON() {
-    const response = await fetch("/metrics/project_tree.json?_shape=objects&_size=max&ttl=60");
+    const response = await fetch("/metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400");
     const fetched = await response.json();
     return fetched;
   }
@@ -70,6 +76,13 @@ function projectSearcher() {
         return result;
       },
       autoSelect: true,
+      onUpdate: (results, selectedIndex) => {
+        if (selectedIndex > -1) {
+          hiddeninput.value = results[selectedIndex].phid;
+        } else {
+          hiddeninput.value = '';
+        }
+      },
       onSubmit: result => {
         if (result && result.phid) {
           result=result.phid;
@@ -90,4 +103,4 @@ function projectSearcher() {
       });
     });
   }
-export { projectSearcher }
+export { projectSearcher, findTasks }

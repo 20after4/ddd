@@ -1,21 +1,18 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { Autocomplete } from './autocomplete.min.js';
+import Autocomplete from '@trevoreyre/autocomplete-js/dist/autocomplete.esm.js';
+async function findTasks(tasks) {
+    var ids = tasks.split(' ');
+    var id_str = ids.map(id => "'" + id + "'").join(",");
+    var query = `/metrics/Task.json??sql=select+name%2C+status%2C+phid%2C+dateCreated%2C+dateModified%2C+description%2C+authorPHID%2C+ownerPHID%2C+priority%2C+points%2C+subtype%2C+closerPHID%2C+dateClosed%2C+[custom.points.final]%2C+[custom.deadline.start]%2C+id%2C+type%2C+attachments+from+Task+WHERE+id+in+(${id_str})+order+by+dateModified&_shape=objects&_size=max`;
+    const response = await fetch(query);
+    const fetched = await response.json();
+    return fetched;
+}
 function projectSearcher() {
     var projects = [];
-    function fetchProjectsJSON() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const response = yield fetch("/metrics/project_tree.json?_shape=objects&_size=max&ttl=60");
-            const fetched = yield response.json();
-            return fetched;
-        });
+    async function fetchProjectsJSON() {
+        const response = await fetch("/metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400");
+        const fetched = await response.json();
+        return fetched;
     }
     const elements = document.querySelectorAll('.autocomplete');
     if (elements && elements.length) {
@@ -72,6 +69,14 @@ function projectSearcher() {
                 return result;
             },
             autoSelect: true,
+            onUpdate: (results, selectedIndex) => {
+                if (selectedIndex > -1) {
+                    hiddeninput.value = results[selectedIndex].phid;
+                }
+                else {
+                    hiddeninput.value = '';
+                }
+            },
             onSubmit: result => {
                 if (result && result.phid) {
                     result = result.phid;
@@ -93,5 +98,5 @@ function projectSearcher() {
         });
     });
 }
-export { projectSearcher };
+export { projectSearcher, findTasks };
 //# sourceMappingURL=autocomplete.js.map

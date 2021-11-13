@@ -191,8 +191,8 @@ class PHIDFacet(ColumnFacet):
                 suggested_facets.append({
                     "name": f"PHID:{column}",
 
-                    "toggle_url": self.ds.absolute_url(
-                        self.request, path_with_added_args(
+                    "toggle_url": self.ds.urls.path(
+                        path_with_added_args(
                             self.request, {"_facet_phid": column}
                         )
                     ),
