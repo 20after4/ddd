@@ -1,33 +1,35 @@
 {
   "name": "data-cubed",
-  "main": "www/static/index.ts",
+  "repository": {
+    "url": "https://gitlab.wikimedia.org/repos/releng/ddd",
+    "type": "git"
+  },
+  "main": "www/static/DashboardApp.ts",
   "scripts": {
-    "build": "snowpack build"
+    "prepare": "grunt svgstore",
+    "prebuild": "tsc",
+    "build": "esbuild www/static/DashboardApp.js --bundle --outfile=www/static/app.js --target=es2020 --format=iife --platform=browser --keep-names"
   },
   "dependencies": {
-    "@optoolco/components": "^12.3.31",
-    "@optoolco/tonic": "^13.3.6",
-    "@trevoreyre/autocomplete-js": "^2.2.0",
+    "@operatortc/components": "^13.0.0",
+    "@operatortc/tonic": "^14.0.0",
+    "@types/luxon": "^2.0.7",
     "@typescript/lib-dom": "npm:@types/web",
+    "@trevoreyre/autocomplete-js": "^2.2.0",
     "chart.js": "^3.6.0",
+    "luxon": "^2.0.2",
     "chartjs-adapter-luxon": "^1.1.0",
     "chartjs-plugin-datalabels": "^2.0.0",
-    "esbuild": "^0.13.13",
-    "luxon": "^2.0.2",
     "vega": "^5",
     "vega-embed": "^6.19.1",
     "vega-lite": "^5",
     "xhr": "^2.6.0"
   },
   "devDependencies": {
-    "@snowpack/plugin-typescript": "^1.2.1",
-    "@swc/cli": "^0.1.51",
-    "@swc/core": "^1.2.107",
-    "es2015": "0.0.0",
+    "esbuild": "^0.13.13",
     "grunt": "^1.4.1",
     "grunt-svgstore": "^2.0.0",
-    "snowpack": "^3.8.8",
-    "typescript": "^4.4.4"
+    "typescript": "^4.6.0-dev.20211116"
   },
   "version": "0.0.1"
 }

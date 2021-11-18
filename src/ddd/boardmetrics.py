@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timedelta
 from pprint import pprint
 from sqlite3 import Connection
-from typing import Iterable, Optional, Sized
+from typing import Iterable, Optional, Sized, Union
 
 import click
 from rich.console import Console
@@ -32,7 +32,7 @@ all_tables = ["columns", "events", "column_metrics", "task_metrics", "phobjects"
 cli = Typer(callback=config, no_args_is_help=True, invoke_without_command=True)
 
 
-def cache_tasks(conduit:Conduit, cache:DataCache, tasks:list, sts):
+def cache_tasks(conduit:Conduit, cache:DataCache, tasks:Iterable, sts):
     ids =  ', '.join(tasks)
     with cache.con as db:
         rows = db.execute(f'select id from Task where id in ({ids})')
@@ -123,13 +123,17 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
         cache_projects(config.phab, cache, sts, project)
         cache_projects(config.phab, cache, sts, proxy_phids)
 
+    optimize(config)
 
+def optimize(config):
+    with config.console.status("[bold green]Running optimize") as sts:
+        config.db.conn.executescript('PRAGMA analysis_limit=1000;PRAGMA optimize;')
 
 @cli.command()
 def map(
     ctx: typer.Context,
     project: str = Option(None),
-    task_ids: Optional[str] = Option(None),
+    taskids: Optional[str] = Option(None),
     mock: Optional[str] = Option(None),
     cache_objects: Optional[bool] = Option(False),
     linear: Optional[bool] = Option(False),
@@ -143,7 +147,10 @@ def map(
     db_path = config.db_path
     console = config.console
     project_phid = project
-
+    if (taskids):
+        task_ids = taskids.split(',')
+    else:
+        task_ids = []
     all_projects:set[Project]
 
     try:
@@ -163,6 +170,7 @@ def map(
                 transactions = transactions["result"]
         elif linear:
             task_ids = []
+
             arg={
                 "queryKey":"all",
                 "order": ['id'],
@@ -213,7 +221,7 @@ def map(
         "Processing  [bold blue]transactions[/bold blue]..."
     ) as sts:
         conn  # type: Connection
-        datapoints, all_projects, all_metrics, taskids = maptransactions(
+        datapoints, all_projects, all_metrics, mapped_taskids = maptransactions(
             project_phid, transactions, conn, console, phab, sts, kvcache
         )
 
@@ -263,10 +271,11 @@ def map(
 
     with console.status("Updating [bold]phobjects[/bold].") as sts:
         if not linear:
-            cache_tasks(config.phab, cache, taskids, sts)
+            cache_tasks(config.phab, cache, mapped_taskids, sts)
         PHObject.resolve_phids(config.phab, cache)
     console.log("Updated phobjects. All done!")
 
+    optimize(config)
 
 def load_data_with_progress(
     conn: Connection,

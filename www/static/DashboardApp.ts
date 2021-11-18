@@ -1,111 +1,99 @@
-import Tonic from '@optoolco/tonic';
+import Tonic from '@operatortc/tonic';
+import {TonicIcon} from './TonicIcon.js'
+import TonicLoader from '@operatortc/components/loader/'
 import { DataSource, DataSet, BaseDataSet, initDataSets} from './datasource.js';
 import { InputFilter, DaterangeFilter, NavTabs, TabItem, AutocompleteFilter } from './filter-input.js';
 import { VegaChart } from './vega-tonic.js'
-import {DependableComponent} from "./dom.js"
+import {DependableComponent, Query} from "./dom.js"
+import { DateTime } from "luxon";
 
 
 function initApp() {
-  initDataSets();
+  Tonic.add(TonicIcon);
+  Tonic.add(TonicLoader.TonicLoader, 'tonic-loader');
   Tonic.add(AutocompleteFilter);
   Tonic.add(InputFilter);
   Tonic.add(DaterangeFilter);
-  Tonic.add(NavTabs);
-  Tonic.add(TabItem);
-  Tonic.add(DashboardApp);
   Tonic.add(VegaChart);
-  const app = <DashboardApp> <unknown>document.getElementsByTagName('dashboard-app')[0];
-  var state;
-  if (history.state) {
-    state = history.state;
-  } else {
-    const url = new URL(window.location.href);
-    state = {"values": { 'project': url.searchParams.get('project'),
-      'date_start': url.searchParams.get('date_start'),
-      'date_end': url.searchParams.get('date_end')
-    }};
-  }
-  app.setState(state);
+  initDataSets();
+  Tonic.add(DashboardApp);
 
-  for (const chart of document.querySelectorAll('vega-chart')) {
-    (chart as unknown as VegaChart).loadcharts();
-  }
+  const app = <DashboardApp> <unknown>document.getElementsByTagName('dashboard-app')[0];
+
 
   console.log('---------------- init ----------------')
 }
 
 
 class DashboardApp extends DependableComponent {
+  query:Query;
   constructor() {
     super();
-    this.state.values = {} || this.state.values;
-    const self = this;
+    this.query = Query.init();
+
+
     this.addEventListener('change', this.change);
 
     const form = this.querySelector('form');
-    this.submitListener = function(e) {
-      self.submit(e, this);
+    this.submitListener = (e) => {
+      this.submit(e, this);
     }
-    this.popstateListener = function(e) {
-      window.setTimeout(function(){
-        self.popstate(e);
-      }, 0)
+    this.popstateListener = (e) => {
+      window.setTimeout(() => {
+        this.popstate(e);
+      }, 0);
+    }
+    form.addEventListener('submit', this.submitListener);
+    window.addEventListener('popstate', this.popstateListener);
+    this.setState(this.query);
 
+    setTimeout(()=>{
+      for (const chart of document.querySelectorAll('vega-chart')) {
+        (chart as unknown as VegaChart).loadcharts();
+      }
+      this.loadContent(this.query.url);
+    },100);
+
+  }
+
+  update_state_listeners() {
+    if (this.query.change_count) {
+      for (const ele of this.querySelectorAll(`[data-state="*"]`)) {
+        ele.stateChanged('project', this.query.state_changes);
+      }
     }
-    //form.addEventListener('submit', this.submitListener);
-    window.addEventListener('popstate', this.popstateListener)
+    this.query.reset_changes();
   }
 
   change(e) {
     if (!e.target.state){
       return;
     }
-    this.state.values[e.target.id] = e.target.value
 
-    for (const i in e.target.state.values) {
-      this.state.values[i] = e.target.state.values[i];
-    }
-
-    console.log('change:', e, this.state.values)
-    for (const ele of  document.querySelectorAll('data-set')) {
-      const ds = ele as unknown as DataSet;
-      ds.state.query = this.state.values;
-      ds.reRender();
-    }
+    this.query.set(e.target.id, e.target.value)
+    console.log('changed', e.target.id, e.target.value);
+    this.update_state_listeners();
   }
 
   popstate(e){
+    this.debug('popstate', e);
     if (e.state) {
+      const url = new URL(location.href)
+      this.query.url = url;
+      this.query.state = e.state;
       this.setState(e.state);
+      this.loadContent(url);
     }
   }
 
   setState(state=null) {
-    if (state) {
-      this.state = state;
+    console.log('setState');
+    //this.update_state_listeners();
+    for (const ele of this.querySelectorAll('.filter')) {
+      console.log('setState',ele,this.query);
+      ele.setState(this.query);
     }
-    const form = this.querySelector('form');
-    if (!form) {
-      return;
-    }
-    for (const ele of form.elements) {
-      var eleid = ele.getAttribute('controller');
-      var filter_ele:InputFilter = <InputFilter> <unknown>document.getElementById(eleid);
-      if (filter_ele) {
-        filter_ele.setState(this.state);
-      } else {
-        eleid = ele.id;
-      }
-      if (this.state.values.hasOwnProperty(eleid)) {
-        const val = this.state.values[eleid] || '';
-        const ele = document.getElementById(eleid) as HTMLInputElement;
-        ele.value = val;
-      }
-    }
-
-    this.submit(null, null);
   }
-
 
   submit(e, originalTarget){
     if (e) {
@@ -114,69 +102,57 @@ class DashboardApp extends DependableComponent {
     }
     for (var child of this.querySelectorAll('.filter')) {
       if (child['modifyState']) {
-        child.modifyState(this.state);
+        child.modifyState(this.query);
       }
     }
-    if (!this.state.values['project']) {
-      var input = this.querySelector('.autocomplete input');
-      input.focus();
-      input.select();
-      return false;
-    }
-    const stateChanges={};
-    const url = new URL(window.location.href);
-    for (const k in this.state.values) {
-      var val = this.state.values[k];
-      if (val && val['value']) {
-        val = val['value'];
-      }
-      if (val){
-        if (url.searchParams.get(k) !== val){
-          url.searchParams.set(k, val);
-          stateChanges[k] = val;
-        }
-      } else if ( url.searchParams.has(k) ) {
-        url.searchParams.delete(k);
-        stateChanges[k] = null;
-      }
-    }
-    var stateChanged = false;
+
+    const state_changes = this.query.reset_changes();
+
     const invalidated:Set<BaseDataSet> = new Set();
-    for (const k in stateChanges) {
-      stateChanged=true;
+    for (const k in state_changes) {
       for (const ele of this.querySelectorAll(`[data-state~="${k}"], [data-state="*"]`)) {
-        ele.stateChanged(k, this.state.values);
+        ele.stateChanged(k, state_changes);
         invalidated.add(ele);
       }
     }
-    if (stateChanged) {
-      console.log('submit', this.state.values);
-      history.pushState(this.state, window.document.title, url);
 
-      for (const ele of invalidated) {
-        console.log('rerender', ele);
-        ele.reRender();
-      }
+    this.debug('submit', this.query);
+    history.pushState(this.query.state, window.document.title, this.query.url);
 
-      for (const c of this.querySelectorAll('.stateful-component')) {
-        c.setState(this.state);
-      }
-
-    //   const res = fetch(url.toString()).then(function(response) {
-    //     if (response.status === 200) {
-    //       const tmpl = document.createElement('template');
-    //       response.text().then(function(text){
-    //         tmpl.innerHTML=text;
-    //         const newBody = tmpl.content.querySelector('.metrics-report');
-    //         const oldBody = document.querySelector('.metrics-report');
-    //         oldBody.replaceWith(newBody);
-    //       });
-    //     }
-    //   });
+    for (const ele of invalidated) {
+      this.debug('rerender', ele);
+      ele.reRender();
     }
 
+    for (const c of this.querySelectorAll('.stateful-component')) {
+      c.setState(this.query);
+    }
+    this.loadContent(this.query.url);
     return false;
   }
+
+  async loadContent(url:URL) {
+    console.log('loadContent', url);
+
+    // for (const ele of  document.querySelectorAll('data-set')) {
+    //   const ds = ele as unknown as DataSet;
+    //   ds.reRender();
+    // }
+
+    var reportUrl = new URL(url);
+    reportUrl.pathname = url.pathname.replace('dashboard/project-metric', 'cycletime/')
+    console.log('reportUrl', reportUrl.href);
+    const response = await fetch(reportUrl.href);
+    if (response.status === 200) {
+      const tmpl = document.createElement('template');
+      const text = await response.text();
+      tmpl.innerHTML=text;
+      const newBody = tmpl.content.querySelector('.metrics-report');
+      const oldBody = document.querySelector('#cycle');
+      oldBody.replaceChildren(newBody);
+    }
+  }
+
   render() {
     return this.html`
     ${this.elements}
@@ -189,5 +165,5 @@ class DashboardApp extends DependableComponent {
 initApp();
 
 
-export {DashboardApp, InputFilter, VegaChart};
+export {DashboardApp, InputFilter, VegaChart, DateTime, TonicIcon};
 export default DashboardApp;

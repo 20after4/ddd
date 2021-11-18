@@ -1,39 +1,20 @@
-import Tonic from '@optoolco/tonic';
-import { DependableComponent } from "./dom.js";
+import Tonic from '@operatortc/tonic';
+import { DependableComponent, Query } from "./dom.js";
 function param_replacer(query_params) {
     /* match patterns like  [[ PREFIX :param SUFFIX ]] */
-    const param_pattern = /(\[\[([^:]+))?:([\w_]+)(([^\]\[]+)?\]\])?/gi;
-    const replace_func = function (match, p1, p2, param, s1, s2) {
-        if (param in query_params) {
-            if (p2 && param && s2) {
-                // the optional parameter is present in the request.
-                // remove the square brackets but keep everything else intact.
-                return p2 + ':' + param + s2;
-            }
-            else if (p2 && param && s1 == ']]') {
-                return p2 + ':' + param;
-            }
-            else {
-                // regular non-optional parameter. return the bare placeholder.
-                return ':' + param;
-            }
-        }
-        else {
-            if (p2 && s2) {
-                // square brackets makes this parameter optional.
-                // Remove the placeholder and the brackets when the parameter is not provided.
-                return '';
-            }
-            else {
-                // no square brackets, just leave the placeholder.
-                return match;
-            }
-        }
-    };
+    //const param_pattern = /(\[\[([^:]+))?:([\w_]+)(([^\]\[]+)?\]\])?/gi;
+    const param_pattern = /:([\w_]+)/gi;
     return function (text) {
         var lines = text.split("\n");
         for (let i = 0; i < lines.length; i++) {
-            lines[i] = lines[i].replaceAll(param_pattern, replace_func);
+            const matches = lines[i].matchAll(param_pattern);
+            for (const match of matches) {
+                const param = match[1];
+                if (!query_params[param]) {
+                    console.debug('Removing optional part of SQL query, param missing: ', param, query_params, lines);
+                    lines[i] = '';
+                }
+            }
         }
         return lines.join('\n');
     };
@@ -41,7 +22,7 @@ function param_replacer(query_params) {
 class DataSource extends DependableComponent {
     constructor() {
         super();
-        this.query = {};
+        this.query = Query.init();
     }
     static stylesheet() {
         return `
@@ -96,23 +77,37 @@ class DataSource extends DependableComponent {
     `;
     }
 }
+class PHIDCache extends DependableComponent {
+    get(phid) {
+        if (!this.phids[phid]) {
+            this.phids[phid] = this.lookup(phid);
+        }
+        return this.phids[phid];
+    }
+    lookup(phid) {
+        const url = `${this.baseurl}metrics/phobjects.json?phid=${phid}`;
+    }
+}
 class BaseDataSet extends DependableComponent {
     constructor() {
         super();
         this.setAttribute('data-state', '*');
-        const app = this.closest('dashboard-app');
-        if (app && app.state) {
-            this.state.query = app.state.values;
-        }
+        this.query = Query.init();
     }
     stateChanged(key, values) {
         console.log('stateChanged on', this, key, values);
-        this.state.query = values;
-        this.state.replacer = param_replacer(values);
+        this.state.replacer = param_replacer(this.query);
         this.reRender();
         const consumers = document.querySelectorAll(`[data-source="${this.id}"]`);
         for (var ele of consumers) {
-            ele.datasetChanged(this);
+            try {
+                if ('datasetChanged' in ele) {
+                    ele.datasetChanged(this);
+                }
+            }
+            catch (err) {
+                console.error(err, ele);
+            }
         }
     }
     get url() {
@@ -140,23 +135,44 @@ class DataSet extends BaseDataSet {
         var baseurl = window.location.protocol + '//' + window.location.host;
         const url = new URL(this.props.url, baseurl);
         url.searchParams.set('sql', sql.toString());
-        const query_params = this.state.query;
+        const query_params = this.query.state;
+        console.log('query_params', query_params, sql);
         for (const prop in query_params) {
             var val = query_params[prop];
+            if (!val) {
+                continue;
+            }
             if (val && val['value']) {
                 val = val['value'];
             }
+            else if (typeof (val) != 'string' && val.hasOwnProperty("toString")) {
+                val = val.toString();
+            }
             url.searchParams.set(prop, val);
         }
-        console.log('query_params', query_params, url.href, sql);
         return url.href;
     }
     async fetch() {
         const url = this.url;
+        // if (this.state['data'] && this.state['data']['rows'] && this.state['data']['url'] == url) {
+        //   return new DatasetCursor(this, this.state.data, url);
+        // }
         const res = await window.fetch(url);
         const fetched = await res.json();
-        this.state.data = new DatasetCursor(this, fetched);
-        return this.state.data;
+        const data = new DatasetCursor(this, fetched, url);
+        if (!data.rows || data.rows.length < 1) {
+            //this.error('empty dataset', fetched, url);
+            throw new Error('dataset empty');
+        }
+        else if (data['error']) {
+            this.error('dataset.fetch: error', data);
+            throw new Error('dataset fetch returned error: ' + data['error']);
+        }
+        else {
+            this.state.data = fetched;
+            this.state.data.url = url;
+        }
+        return data;
     }
     render(p1, p2, p3) {
         return this.html `${this.props.sql}${this.nodes}`;
@@ -167,7 +183,7 @@ class StaticDataSet extends DataSet {
         const url = this.props.url;
         const response = await fetch(url);
         const fetched = await response.json();
-        this.state.data = new DatasetCursor(this, fetched);
+        this.state.data = new DatasetCursor(this, fetched, url);
         return this.state.data;
     }
     render(p1, p2, p3) {
@@ -175,11 +191,12 @@ class StaticDataSet extends DataSet {
     }
 }
 class DatasetCursor {
-    constructor(dataset, data) {
+    constructor(dataset, data, url) {
         this.data = { rows: [], columns: [] };
         this.indexes = {};
         this.dataset = dataset;
         this.data = data;
+        this.url = url;
     }
     get length() {
         return this.data.rows.length;

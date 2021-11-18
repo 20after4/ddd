@@ -2,7 +2,7 @@
 import Chart from 'chart.js/auto';
 import 'chartjs-adapter-luxon';
 import {CategoricalBubbleController} from './CategoricalBubbleController.js';
-import Tonic from '@optoolco/tonic'
+import Tonic from '@operatortc/tonic'
 
 
 class TonicChart extends Tonic {

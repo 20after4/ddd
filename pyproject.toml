@@ -10,7 +10,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = '>=3.7.1'
+python = '>=3.7.3, ~=3.10.1'
 typer = {extras = ["all"], version = "^0.3.2"}
 datasette = { path = "src/datasette", develop = true }
 datasette-dashboards = { path = "src/datasette-dashboards", develop = true }

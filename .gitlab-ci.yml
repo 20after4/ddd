@@ -23,7 +23,9 @@ stages:          # List of stages for jobs, and their order of execution
 
 npm:
   stage: prep
+  image: docker-registry.wikimedia.org/releng/npm6:0.1.1
   script:
+    - apt install npm
     - npm install
 
 venv:
@@ -46,9 +48,12 @@ tsc:
     - tsc
 
 grunt:
+  image: docker-registry.wikimedia.org/releng/npm6:0.1.1
   stage: build
   script:
-    - grunt
+    - npm install
+    - npm run build
+    - npx grunt
 
 pytest:
   stage: test    # It only starts when the job in the build stage completes successfully.

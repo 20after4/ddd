@@ -1,8 +1,11 @@
 
 import Autocomplete from "@trevoreyre/autocomplete-js";
-import Tonic from '@optoolco/tonic'
+import Tonic from '@operatortc/tonic'
 import {fetchData, initDataSets} from './datasource.js'
-import {DependableComponent} from "./dom.js"
+import {DependableComponent, Query} from "./dom.js"
+import TonicIcon from '@operatortc/components/icon'
+import { DateTime } from "luxon";
+
 initDataSets();
 
 async function findTasks(tasks:string) {
@@ -23,36 +26,49 @@ function dispatchChangeEvent(target, value) {
 }
 
 class FilterBase extends DependableComponent {
+  query:Query;
   constructor() {
     super();
-    this.state.values = this.state.values || {}
+    this.query = Query.init();
   }
-  modifyState(parentState) {
-    if (parentState.values) {
-      parentState.values[this.id] = this.value;
-    }
+  modifyState(query) {
+    query.set(this.id, this.value);
   }
-  setState(parentState) {
-    if (parentState.values[this.id]) {
-      this.value = parentState.values[this.id];
-    }
+  setState(query) {
+    this.query = query;
   }
   connected() {
     super.connected();
     this.classList.add('filter');
   }
   set value(val) {
-    this.state.values[this.id] = val;
+    this.query.set(this.id, val);
+    this.changed = true;
   }
   get value() {
-    return this.state.values[this.id];
+    return this.query[this.id];
+  }
+  get changed() {
+    return this.state.changed;
+  }
+  set changed(val) {
+    this.state.changed=val;
+  }
+  blur(e) {
+    if (this.changed){
+      this.changed=false;
+      dispatchChangeEvent(this, this.value);
+    }
   }
 }
 
 class AutocompleteFilter extends FilterBase {
+  input:HTMLInputElement;
+
   static stylesheet () {
     return `
     .autocomplete-input {
+      position: relative;
       border: 1px solid #ccc;
       border-radius: 8px;
       width: 100%;
@@ -75,7 +91,11 @@ class AutocompleteFilter extends FilterBase {
       outline: none;
       box-shadow: 0 2px 2px rgba(0, 0, 0, 0.16);
     }
-
+    .autocomplete-input .x  {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+    }
     [data-position="below"] .autocomplete-input[aria-expanded="true"] {
       border-bottom-color: transparent;
       border-radius: 8px 8px 0 0;
@@ -161,25 +181,38 @@ class AutocompleteFilter extends FilterBase {
     return this.html`
         <div class="autocomplete filter-group" data-expanded="false" data-loading="false" data-position="below">
           <input class="autocomplete-input" controller="${this.id}" name="${this.id}_text" id="${this.id}_text" placeholder="Enter project name or #hashtag">
+          <tonic-icon class='x' symbol-id="icon-x-square" src="/static/icons.svg" fill="black" size="24px"></tonic-icon>
           <ul class="autocomplete-result-list"></ul>
           <input type="hidden" name="${this.id}" controller="${this.id}" class='filter-input' id="${this.id}">
         </div>
       `;
   }
 
-
-
-  modifyState(parentState) {
-    if (parentState.values) {
-      parentState.values[this.id] = this.value['phid']
-
+  click(e) {
+    try {
+      const icon = e.target.closest('tonic-icon');
+      if (icon && icon.classList.contains('x')) {
+        e.stopPropagation();
+        icon.style.visibility = 'hidden';
+        this.value = '';
+        this.input.focus();
+      }
+    } catch (err) {
+      this.error(err);
     }
   }
 
-  async setState(parentState) {
-    if (parentState.values[this.id]) {
+  modifyState(query) {
+    if (this.value && this.value['phid']) {
+      query.set(this.id, this.value['phid']);
+    }
+  }
+
+  async setState(query) {
+    this.query = query;
+    if (query[this.id]) {
       var hiddeninput = this.querySelector('input[type=hidden]');
-      var val = parentState.values[this.id];
+      var val = query[this.id];
       if (val['phid']) {
         hiddeninput.value = val['phid'];
         val['value'] = val['phid'];
@@ -189,32 +222,42 @@ class AutocompleteFilter extends FilterBase {
         this.state.projects = projects;
         this.value = projects.lookup('phid', val);
       }
-
     }
   }
 
   set value(val) {
-    if (val == this.state.values[this.id]) {
+    if (val === this.query[this.id]) {
       return;
     }
-    this.state.values[this.id] = val;
+    if (val && val['phid']) {
+      val.toString = function() { return this['phid']; }
+    }
+    this.query[this.id] = val;
     this.completer.setValue(val);
-
-    dispatchChangeEvent(this, val);
+    this.changed = true;
+    try {
+      if (val != '') {
+        const x = this.querySelector('.x');
+        x.style.visibility = 'visible';
+      }
+    } catch (err) {
+      this.error(err);
+    }
+    //dispatchChangeEvent(this, val);
   }
 
 
   get value() {
-    if (!this.state.values[this.id]){
+    if (!this.query[this.id]){
       var hiddeninput = this.querySelector('input[type=hidden]');
       return hiddeninput.value;
     }
-    return this.state.values[this.id];
+    return this.query[this.id];
   }
 
   connected() {
-
-    const self=this;
+    this.input = this.querySelector('.autocomplete-input');
+    const self = this;
     const state = this.state;
 
 
@@ -240,16 +283,22 @@ class AutocompleteFilter extends FilterBase {
         if (project.path && project.path != project.name){
           strings.push(project.path.toLowerCase());
         }
+        if (project.name.indexOf('-')) {
+          const parts = project.name.toLowerCase().split('-');
+          for (const part of parts) {
+            strings.push(part);
+          }
+        }
         var score = 0;
         for (let w of words) {
           var cnt = 0;
-          var len = strings.length;
+          var len = 3;
           for (let s of strings) {
             if (!s) {
               continue;
             }
             if (s == text) {
-              cnt+=(3*len);
+              cnt+=(4*len);
             }
             if (s.startsWith(text)) {
               cnt+=(2*len);
@@ -260,7 +309,12 @@ class AutocompleteFilter extends FilterBase {
             if (s.includes(w)) {
               cnt+=(len);
             }
-            len--;
+            if (s == 'team' || s == 'kanban' || s == 'roadmap') {
+              cnt += 1;
+            }
+            if (len>1){
+              len--;
+            }
           }
           if (cnt < 1) {
             score = 0;
@@ -314,30 +368,16 @@ class InputFilter extends FilterBase {
   connected() {
     this.classList.add('filter');
     this.state.inputs = this.querySelectorAll('input');
-    const self = this
-    this.inputListener = function(e) {
-      self.input(e);
-    }
-    var i:HTMLInputElement;
-    for (i of this.state.inputs){
-      if (this.state[i.id]) {
-        i.value = this.state[i.id];
-      } else {
-        this.state[i.id] = i.value;
-      }
-
-    }
   }
 
   input(e) {
-    this.state.values[e.target.id] = e.target.value;
-    dispatchChangeEvent(this, this.value);
+    this.query.set(this.id, e.target.value);
+    this.changed=true;
   }
 
   get value() {
-    return this.state["filter_"+this.id]
+    return this.query[this.id]
   }
-
   set value(val) {
     this.querySelector('#filter_'+this.id).value = val;
   }
@@ -363,11 +403,7 @@ class DaterangeFilter extends InputFilter {
     }
     `;
   }
-  constructor() {
-    super();
-    if (!this.state.values)
-      this.state.values = {};
-  }
+
   input(e:Event) {
     const id = this.id;
     const ele = <HTMLInputElement> e.target;
@@ -376,181 +412,229 @@ class DaterangeFilter extends InputFilter {
     } else if (ele.classList.contains('range-end')){
       this.end = ele.value;
     }
-    dispatchChangeEvent(this, this.value);
+    dispatchChangeEvent(this, ele.value);
   }
 
-  modifyState(parentState) {
-    if (parentState.values) {
-      parentState.values[this.id+'_start'] = this.start;
-      parentState.values[this.id+'_end'] = this.end;
-      delete parentState.values[this.id];
-    }
+  modifyState(query:Query) {
+    query.set(this.id+'_start', this.start);
+    query.set(this.id+'_end', this.end);
   }
-  setState(parentState) {
-    const start = this.id+'_start';
-    const end = this.id+'_end';
-
-    this.value = parentState.values[this.id];
-    this.start = parentState.values[start];
-    this.end = parentState.values[end];
+  setState(query:Query) {
+    this.end = query[this.id + '_end'];
+    this.start = query[this.id + '_start'];
   }
   get value(){
     return  this.start + ':' + this.end;
   }
 
   set value(val) {
-    if (val == undefined) {
-      return;
-    }
-    if (val.indexOf(':') > 0) {
-      const vals = val.split(':');
-      this.start = vals[0];
-      this.end = vals[1];
-    } else if (val !== ':') {
-      this.start = '';
-      this.end = val;
-    } else {
-      this.start = '';
-      this.end = '';
-    }
+
   }
 
   get start() {
-    return this.state.values[this.id+'_start']
+    return this.get(this.id+'_start');
   }
-
-  set start(val) {
-    this.state.values[this.id+'_start'] = val
-    this.querySelector('#'+this.id+'_start').value = val
-  }
-
   get end() {
-    return this.state.values[this.id+'_end']
+    return this.get(this.id+'_end');
+  }
+  get(id:string) {
+    try {
+      return this.querySelector('#'+id).value
+    } catch(err) {
+      return this.query[id];
+    }
+  }
+  set start(val) {
+    const id=this.id+'_start'
+    this.querySelector('#'+id).value = val
   }
 
   set end(val) {
-    this.state.values[this.id+'_end'] = val
-    this.querySelector('#'+this.id+'_end').value = val
+    const id=this.id+'_end'
+    this.querySelector('#'+id).value = val
   }
   disconnected(){
 
   }
+  click(e) {
+    const href:string = e.target.getAttribute('href');
+    if (!href){
+      return;
+    }
+    const prefix='#'+this.id+'_start=';
+    if (href.startsWith(prefix)){
+      e.preventDefault();
+      var value = href.substring(prefix.length);
+      if (value.indexOf('&') > 0) {
+        const values = value.split('&');
+        value = values[0];
+        const idx = values[1].indexOf('=');
+        this.end = values[1].substring(idx+1);
+      }
+      this.start = value;
+      const app = this.closest('dashboard-app');
+      setTimeout(function(){
+        app.submit();
+      }, 100);
 
+    }
+  }
   render() {
     const id = this.id;
+    const dt = DateTime.now();
+    const yr = dt.startOf('year');
+    const qt = dt.startOf('quarter');
+    const pq = qt.minus({months: 3});
+    const mn = dt.startOf('month');
     return this.html`
     <div id="${id}" class="p-0 d-inline-flex input-group filter-type-daterange align-self-center">
-    <span class="input-group-text">From:</span>
-    <input id="${id}_start" controller="${id}" name="${id}_start" class="form-control range-start" type="date"  aria-label="Start Date">
+
+    <div class='btn-group'>
+      <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">From</button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#date_start=${mn.toISODate()}&date_end=${mn.endOf('month').toISODate()}">This Month ${mn.toISODate()}</a></li>
+        <li><a class="dropdown-item" href="#date_start=${qt.toISODate()}&date_end=${qt.endOf('quarter').toISODate()}">This Quarter ${qt.toISODate()}</a></li>
+        <li><a class="dropdown-item" href="#date_start=${pq.toISODate()}&date_end=${pq.endOf('quarter').toISODate()}">Last Quarter ${pq.toISODate()}</a></li>
+        <li><a class="dropdown-item" href="#date_start=${yr.toISODate()}&date_end=${dt.endOf('year').toISODate()}">This Year ${yr.toISODate()}</a></li>
+      </ul>
+      </div>
+    <!--<span class="input-group-text">From:</span>-->
+    <input id="${id}_start" controller="${id}" value='${this.start}' class="form-control range-start" type="date"  aria-label="Start Date">
+
     <span class="input-group-text">To:</span>
-    <input id="${id}_end" controller="${id}" name="${id}_end" class="form-control range-end" type="date"  aria-label="End Date">
+    <input id="${id}_end" controller="${id}" value='${this.end}' class="form-control range-end" type="date"  aria-label="End Date">
     </div>
     `;
   }
 
 }
 
+type TabType = TabItem & HTMLElement
+
 
 class NavTabs extends InputFilter {
+  tabs:TabType[];
+
+  constructor() {
+    super();
+    this.tabs = this.elements;
+  }
+
   set value(val) {
-    this.state.values[this.id] = val;
+    this.query[this.id] = val;
   }
   get value() {
-    return this.state.values[this.id];
+    return this.query[this.id];
   }
   set selected(tab){
     if (this.state.selected == tab){
       return;
     }
     if (this.state.selected) {
-      this.state.selected.value = false;
+      this.state.selected.value = 0;
     }
-    if (!tab.value){
-      tab.value = true;
-    }
+
+    tab.value = 1;
     this.state.selected = tab;
     this.value = tab.id;
   }
 
+  connected() {
+
+    for (const tab of this.tabs ) {
+      if((tab as HTMLElement).classList.contains('active')){
+        this.state.selected = tab;
+        tab.selected = true;
+      } else {
+        tab.selected = false;
+      }
+    }
+    if (!this.querySelector('.nav-tabs')) {
+      this.reRender();
+    }
+  }
 
   click(e){
     if (!e.target.matches('.nav-link')) return;
     e.preventDefault();
     e.stopPropagation();
-    const panel = e.target.parentElement.getAttribute('panel');
-    this.selected = document.getElementById(panel).parentElement;
+    const target = e.target.parentElement;
+    const panel_id = target.getAttribute('panel');
+    const panel = document.getElementById(panel_id) as any as TabItem;
+    this.tabs.forEach(tab=>tab.selected=false);
+    panel.selected = true;
+    this.selected = panel;
+    const nav = this.querySelector('.nav-tabs')
+    nav.innerHTML = this.renderTabs().join('\n');
+  }
+
+  renderTabs():any[] {
+    const tabs = this.tabs.map(tab=>{
+      const selected = tab.selected ? 'active':'';
+      const label = tab.getAttribute('label');
+      const aria = tab.selected ? 'aria-current="page"' : '';
+
+      return this.html`
+      <li class='nav-item' ${aria} panel='${tab.id}'>
+        <a class='nav-link ${selected}' href='#${tab.id}'>${label}</a>
+      </li>`;
+    });
+    return tabs;
   }
   render() {
-    const val = this.value;
-    const tabs = this.children;
-    const tabitems = [];
-    for (const tab of tabs){
-      if (tab.id == val){
-        tab.selected = true;
-        this.selected = tab;
-      } else {
-        tab.selected = false;
-      }
-      tabitems.push(tab)
-    }
+    console.log('this.tabs', this.tabs);
     return this.html`
     <ul class="nav nav-tabs">
+      ${this.renderTabs()}
 
     </ul>
+    <div class='tab-panels'>
     ${this.elements}
-    `;
-  }
-}
-
-class TabItem extends Tonic {
-
-  get value() {
-    return this.props.value;
-  }
-  set value(val) {
-    this.props.value = val;
-    if (val) {
-      this.state.panel.classList.remove('hidden');
-      this.state.tab.classList.add('active');
-    } else {
-      this.state.panel.classList.add('hidden');
-      this.state.tab.classList.remove('active');
-    }
-  }
-  connected() {
-
-    const parentTabs = this.parentElement.querySelector('.nav-tabs');
-    if (parentTabs) {
-      const tab = this.querySelector('.nav-link');
-      parentTabs.appendChild(tab.parentElement);
-      this.state.tab = tab;
-      this.state.panel = document.getElementById('panel-'+this.id);
-    }
-    this.value = this.props.value;
-  }
-  set selected(val) {
-    this.value = val;
-  }
-  get selected() {
-    return parseInt(this.value);
-  }
-
-  render() {
-    console.log('props', this.props);
-    const selected = this.selected ? 'active':'';
-    const hidden = this.selected ? '' : 'hidden';
-    const label = this.props.label;
-    const aria = this.selected ? 'aria-current="page"' : '';
-    return this.html`
-    <li class='nav-item' ${aria} panel='panel-${this.id}'>
-      <a class='nav-link ${selected}' href='#panel-${this.id}'>${label}</a>
-    </li>
-    <div class='panel ${hidden}' id='panel-${this.id}'>
-      ${this.nodes}
     </div>
     `;
   }
 }
+
+
+class TabItem extends DependableComponent {
+  isTrue(val) {
+    return val == 1 || val == '1' || val == true || val == 'true';
+  }
+  get value() {
+    return this.props.value;
+  }
+  set value(val) {
+    //this.debug.log('value', val, this.props.value, this.selected)
+    this.props.value = val;
+    this.setAttribute('value', this.props.value);
+    if (this.isTrue(val)) {
+      this.parentElement.selected = this;
+      this.classList.remove('hidden');
+      this.classList.add('active');
+    } else {
+      this.classList.add('hidden');
+      this.classList.remove('active');
+    }
+
+  }
+  connected() {
+    this.value = this.props.value || this.props.selected;
+  }
+  set selected(val) {
+    this.value = val;
+  }
+  get selected():boolean {
+    return this.isTrue(this.props.value);
+  }
+
+  render() {
+    return this.html`
+      ${this.nodes}
+    `;
+  }
+}
+Tonic.add(TabItem);
+Tonic.add(NavTabs);
 
 
 export { InputFilter, AutocompleteFilter, findTasks, DaterangeFilter, NavTabs, TabItem }

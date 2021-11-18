@@ -2,11 +2,11 @@ title: Data³
 about: Data³
 about_url: https://www.mediawiki.org/wiki/Data%C2%B3
 description_html: |-
-  Try out the   <a href="/-/dashboards/project-metrics">Metrics</a> dashboard!
+  Try out the   <a href="/-/ddd/dashboard/project-metrics">Phabricator Metrics</a> dashboard!
 plugins:
   datasette-dashboards:
     project-metrics:
-      title: Data³
+      title: Data³ Phabricator Metrics
       description: ""
       placeholder_text:
         To get started, please enter a project name or task ID at the top of the page.
@@ -77,241 +77,8 @@ plugins:
             encoding:
               x: { field: duration_days, type: quantitative, title: 'Days in column' }
               y: { field: column_name, type: nominal, title: 'Column'  }
-        most-active-projects:
-          title: Most popular projects (by number of tasks per week)
-          db: metrics
-          section: disabled
-          requires: [ -project, -task_id]
-          query: |-
-            SELECT
-              DISTINCT metric AS project_phid,
-              m.state,
-              p.label AS project_name,
-              p.root as root,
-              COUNT(DISTINCT task) AS tasks,
-              w.date AS week
-            FROM
-              task_metrics m
-              JOIN ActiveProjectsCache p ON p.phid = m.metric and state='tagged'
-              JOIN weeks w ON w.date=DATE(ts,'unixepoch','weekday 0', '-7 days')
-            WHERE TRUE
-            [[ AND w.date >= date(:date_start) ]]
-            [[ AND w.date <= date(:date_end) ]]
-            AND project_name != 'Patch-For-Review'
-            GROUP BY
-              root, week
-            HAVING tasks > 20
-            ORDER BY
-              week DESC,
-              tasks DESC;
-          library: vega
-          display:
-            height: 350
-            autosize: { "type": "fit-x", "contains": "padding" }
-            mark:
-              type: bar
-              tooltip: true
-              baseline: bottom
-              line: true
-            encoding:
-              size:
-                value: 12
-              x:
-                field: week
-                type: temporal
-              color:
-                field: project_name
-                type: nominal
-                scale:
-                  scheme: "category20c"
-              y:
-                field: tasks
-                type: quantitative
-        column-metrics:
-          title: Tasks added & removed from columns, weekly.
-          db: metrics
-          requires: [ project, -column, -task_id ]
-          section: disabled
-          columns: 6
-          query: |-
-            select
-              *,
-              sum(value) as total_tasks
-            from
-              (
-                SELECT
-                  printf('T%u', c.task) AS task,
-                  datetime(c.ts, 'unixepoch') as ts,
-                  date(c.ts, 'unixepoch', 'start of month') as month,
-                  date(
-                    c.ts,
-                    'unixepoch',
-                    'weekday 0'
-                  ) as week,
-                  p.column_phid as column_phid,
-                  p.column_name AS column_name,
-                  p.project_phid as project_phid,
-                  p.project_name as project_name,
-                  p.project_name||':'||p.column_name AS qualified_name,
-                  p.status as column_hidden,
-                  c.value as value
-                FROM
-                  column_metrics c
-                  join columns p on c.column = p.column_phid
-                  [[ AND column_phid=:column ]]
-                [[ WHERE  project_phid=:project ]]
-                order by ts
-              )
-            where
-              column_hidden = 0
-              AND project_phid=:project
-              [[ AND ts >= date(:date_start) ]]
-              [[ AND ts <= date(:date_end) ]]
-            group by week, column_phid
-          library: vega
-          display:
-            height: 300
-            autosize: { "type": "fit-x", "contains": "padding" }
-            mark:
-              type: bar
-              tooltip: true
-              baseline: bottom
-              line: true
-            encoding:
-              size:
-                value: 12
-                # field: total_tasks
-                # type: quantitative
-                # aggregate: sum
-              x:
-                field: ts
-                type: temporal
-                #timeUnit: week
-              color:
-                field: column_name
-                type: nominal
-              y:
-                field: total_tasks
-                type: quantitative
-                scale:
-                  scheme: "blueorange"
 
-        burnup:
-          title: Burnup
-          db: metrics
-          requires: [ project, -task_id ]
-          section: default
-          columns: 6
-          columns_max: 12
-          cardorder: last
-          query:
-            SELECT
-              distinct count(distinct task) as value,
-              ph.name as state_name,
-              ph.phid as state_phid,
-              w.date as week,
-              m.metric as project,
-              max(date(m.ts, 'unixepoch')) as ts,
-              max(date(m.ts2, 'unixepoch')) as ts2
-            FROM
-              task_metrics m
-              JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
-              JOIN (
-                select
-                  distinct date
-                from
-                  weeks
-              ) w on date(w.date) >= date(m.ts, 'unixepoch')
-            WHERE TRUE
-               AND date(m.ts, 'unixepoch') >= date(:date_start)
-              AND project = :project
-              AND state not in ('created', 'tagged', 'untagged')
-              and (not state like 'PHID-PROJ-%')
-               AND week >= date(:date_start)
-               AND week <= date(:date_end)
-            GROUP BY
-              state_name,
-              week
-          library: vega
-          display:
-            height: 300
-            params:
-              - name: brush
-                select: { type: interval, resolv: global }
-              - name: column
-                select: { type: interval  }
-                bind: legend
-            mark: { type: area, tooltip: true, clip: true}
-            encoding:
-              x:
-                field: week
-                #timeUnit: week
-                type: temporal
-                #scale: { clamp: true,  padding: 0}
-              y:
-                field: value
-                type: quantitative
-              color:
-                field: state_name
-                type: nominal
-                scale:
-                  scheme: category20c
-        chill:
-          title: Chill Chart
-          db: metrics
-          requires: [ project, -task_id ]
-          section: disabled
-          columns: 6
-          columns_max: 12
-          cardorder: last
-          query:
-            SELECT distinct
-                count(distinct task) as value,
-                ph.name as state,
-                state as realstate,
-                ph.phid as state_phid,
-                w.date as week,
-                m.metric as project,
-                m.rowid,
-                date(m.ts, 'unixepoch') as ts,
-                date(m.ts2, 'unixepoch') as ts2
-              FROM
-                task_metrics m
-                JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
-                JOIN (select distinct date from weeks) w
-                 on date(w.date) <= date(m.ts, 'unixepoch')
-                 and date(w.date, '+7 days') >= date(m.ts, 'unixepoch')
-            WHERE
-            m.metric != 'startofwork'
-              [[AND  project=:project  ]]
-              [[AND state=:column ]]
-            AND  state not in ('created','tagged','untagged')
-            and (not state like 'PHID-PROJ-%')
-            AND week >= date(:date_start)
-            AND week <= date(:date_end)
-              GROUP BY
-                state_phid,
-                date(week)
-              ORDER BY
-                m.ts
-          library: vega
-          display:
-            height: 300
-            mark: { type: bar, tooltip: true, clip: true, size: 25}
-            encoding:
-              x:
-                field: week
-                #timeUnit: week
-                type: temporal
-                #scale: { clamp: true,  padding: 0}
-              y:
-                field: value
-                type: quantitative
-              color:
-                field: state
-                type: nominal
-                scale:
-                  scheme: category20c
+
         states:
           title: Status changes
           db: metrics
@@ -335,7 +102,8 @@ plugins:
               count(*) as count
             from
               events e
-            where '' != :project
+            where TRUE
+            AND '' != :project
             AND cast(e.task as INTEGER) in (select distinct cast(task as INTEGER) as task from task_metrics where metric=:project)
             and old_new is not null
             and event in ('status')
@@ -372,25 +140,27 @@ plugins:
                   legend: { direction: vertical, orient: right }
                 color:
                   field: old_new
-                  type: nominal
+                  title: Status (old -> new)
+                  type: ordinal
+                  order: x
                   legend: {
                     direction: horizontal,
                     orient: bottom,
                     columns: 4,
                     symbolLimit: 20
                   }
-                  scale: { scheme: 'category20c' }
-                y: { field: old, type: nominal, axis: {grid: true, tickBand: "extent"}}
-                x: { field: new, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                  scale: { scheme: 'yelloworangered' }
+                y: { field: old, title: Old Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                x: { field: new, title: New Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
                 stroke:
                   condition:
                     param: "highlight"
                     empty: false
                     value: black
                   value: null
-                facet: { field: month, columns: 3, type: temporal}
+                facet: { field: month, title: Month (ending date), columns: 3, type: temporal}
         columns:
-          title: column changes
+          title: Workboard Progression
           db: metrics
           requires: [ project, -task_id ]
           section: default
@@ -414,7 +184,7 @@ plugins:
               event = "columns"
                AND month >= date(:date_start)
                AND month <= date(:date_end)
-              AND e.project=:project
+               AND e.project=:project
             group by
               project_phid,
               month,
@@ -440,24 +210,86 @@ plugins:
                   legend: { direction: vertical, orient: right }
                 color:
                   field: old_new
+                  title: old -> new
                   type: nominal
                   legend: {
                     direction: horizontal,
                     orient: bottom,
-                    columns: 4,
+                    columns: 3,
                     symbolLimit: 20
                   }
-                  scale: { scheme: 'category20c' }
-                y: { field: old, type: nominal, axis: {grid: true, tickBand: "extent"}}
-                x: { field: new, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                  scale: { scheme: 'category20b' }
+                y: { field: old, title: Old Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
+                x: { field: new, title: New Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
                 stroke:
                   condition:
                     param: "highlight"
                     empty: false
                     value: black
                   value: null
-                facet: { field: month, columns: 3, type: temporal}
-
+                facet: { field: month, title: Month (ending date), columns: 3, type: temporal, margin: 5}
+        burnup:
+          title: Burnup
+          db: metrics
+          requires: [ project, -task_id ]
+          section: default
+          columns: 6
+          columns_max: 12
+          cardorder: last
+          query:
+            SELECT
+              distinct count(distinct task) as value,
+              ph.name as state_name,
+              ph.phid as state_phid,
+              w.date as week,
+              max(date(m.ts, 'unixepoch')) as ts,
+              max(date(m.ts2, 'unixepoch')) as ts2
+            FROM
+              task_metrics m
+              JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
+              JOIN (
+                select
+                  distinct date
+                from
+                  weeks
+              ) w on date(w.date) >= date(m.ts, 'unixepoch')
+            WHERE TRUE
+                AND date(m.ts, 'unixepoch') >= date(:date_start)
+                AND m.metric = :project
+                AND state not in ('created', 'tagged', 'untagged')
+                AND (not state like 'PHID-PROJ-%')
+                AND week >= date(:date_start)
+                AND week <= date(:date_end)
+            GROUP BY
+              state_name,
+              week
+          library: vega
+          display:
+            height: 420
+            params:
+              - name: brush
+                select: { type: interval, resolv: global }
+              - name: column
+                select: { type: interval  }
+                bind: legend
+            mark: { type: area, tooltip: true, clip: true}
+            encoding:
+              x:
+                field: week
+                timeUnit: week
+                type: temporal
+                title: Week
+                #scale: { clamp: true,  padding: 0}
+              y:
+                field: value
+                title: Task Count
+                type: quantitative
+              color:
+                field: state_name
+                title: Milestone
+                type: nominal
+                scale:
+                  scheme: category20c
         time_in_columns:
           title: Average time tasks remain, per column
           db: metrics
@@ -525,32 +357,162 @@ plugins:
                     ORDER BY
                       path
                   )
-                where
-                  root = :project
+                where TRUE
+                  AND root = :project
               )
             group by
               state
             order by
               days
+            limit 20
           library: vega
           display:
-            height: 480
+            height: 420
             mark: { type: bar, tooltip: true, clip: true, size: 12}
             encoding:
               x:
                 field: days
+                title: Days
                 type: quantitative
               y:
                 field: column_name
+                title: Task Column
                 type: nominal
                 sort: -x
               color:
                 field: column_name
+                title: Columns
                 type: nominal
                 scale:
                   scheme: category20c
 
-
+        column-metrics:
+          title: Cumulative Sum of Tasks per workboard column.
+          db: metrics
+          requires: [ project, -column, -task_id ]
+          section: default
+          columns: 6
+          query: |-
+            select
+              month, column_name,
+              sum(value) as total_tasks
+            from
+              (
+                SELECT
+                  printf('T%u', c.task) AS task,
+                  datetime(c.ts, 'unixepoch') as ts,
+                  date(c.ts, 'unixepoch', 'start of month') as month,
+                  date(
+                    c.ts,
+                    'unixepoch',
+                    'weekday 0'
+                  ) as week,
+                  p.column_phid as column_phid,
+                  p.column_name AS column_name,
+                  p.project_phid as project_phid,
+                  p.project_name as project_name,
+                  p.project_name||':'||p.column_name AS qualified_name,
+                  p.status as column_hidden,
+                  c.value as value
+                FROM
+                  column_metrics c
+                  join columns p on c.column = p.column_phid
+                   AND column_phid=:column
+                 WHERE
+                 project_phid=:project
+                order by ts
+              )
+            where
+              column_hidden = 0
+              AND project_phid=:project
+              AND ts >= date(:date_start)
+              AND ts <= date(:date_end)
+            group by month, column_phid
+          library: vega
+          display:
+            height: 400
+            autosize: { "type": "fit", "contains": "padding" }
+            mark:
+              type: bar
+              tooltip: true
+              baseline: bottom
+              line: true
+            encoding:
+              size:
+                value: 15
+                # field: total_tasks
+                # type: quantitative
+                # aggregate: sum
+              x:
+                field: month
+                title: Month
+                type: temporal
+                #timeUnit: month
+              color:
+                field: column_name
+                title: Column
+                type: nominal
+              y:
+                field: total_tasks
+                title: Task Count
+                type: quantitative
+                scale:
+                  scheme: "blueorange"
+              # facet:
+              #   columns: 3
+              #   field: month
+              #   type: nominal
+        most-active-projects:
+          title: Busiest Projects (by number of tagged tasks)
+          db: metrics
+          section: default
+          requires: [ -project, -task_id]
+          query: |-
+            SELECT
+              DISTINCT metric AS project_phid,
+              m.state,
+              p.label AS project_name,
+              p.root as root,
+              COUNT(DISTINCT task) AS tasks
+            FROM
+              task_metrics m
+              JOIN ActiveProjectsCache p ON p.phid = m.metric
+              and m.state = 'tagged'
+            where TRUE
+              AND date(ts,'unixepoch') >= date(:date_start)
+              AND date(ts,'unixepoch') <= date(:date_end)
+            GROUP BY
+              root
+            HAVING
+              tasks > 20 and project_name != 'Patch-For-Review'
+            ORDER BY
+              tasks DESC
+            LIMIT 12;
+          library: vega
+          display:
+            height: 420
+            autosize: { "type": "fit", "contains": "padding" }
+            config: { legend: { disable: true  } }
+            mark:
+              type: bar
+              tooltip: true
+              line: true
+            encoding:
+              size:
+                value: 10
+              y:
+                field: project_name
+                type: nominal
+                sort: -x
+              color:
+                field: project_name
+                type: nominal
+                sort: -x
+                scale:
+                  scheme: "tableau20"
+              x:
+                field: tasks
+                type: quantitative
 
 
 databases:
@@ -622,7 +584,8 @@ databases:
             old as source,
             new as column
             FROM events
-            WHERE event in ('columns', 'projects') and project=:project
+            WHERE event in ('columns', 'projects')
+            AND project=:project
             GROUP BY month,column,source ORDER BY month
       columns_rollup:
         title: aggregations by column and month
@@ -638,7 +601,8 @@ databases:
           group_concat(new, ', ') as destinations,
           group_concat(datetime(ts, 'unixepoch'), ', ') as times
           FROM events
-          WHERE event in ('columns', 'projects') and :project in (project, old, new)
+          WHERE event IN ('columns', 'projects')
+          AND :project IN (project, old, new)
           GROUP BY month
           order by ts
       columns_startofwork:
@@ -657,7 +621,7 @@ databases:
           join ProjectColumn c on c.phid = m.state
         where
           "metric" = 'startofwork'
-          and c.project = :project
+          AND c.project = :project
       mentions:
         title: "@Mentions in comments"
         params: [ Phabricator_User ]

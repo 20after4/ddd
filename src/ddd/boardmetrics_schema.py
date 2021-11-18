@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import sqlite3
 from ddd.phobjects import sqlite_connect
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, Union
 from rich.console import Console
 from typer.params import Option
 from typer.models import Context
@@ -43,9 +43,11 @@ class Config:
             --sql
             CREATE UNIQUE INDEX IF NOT EXISTS task_metric ON task_metrics(ts, task, metric, state);
             --sql
-            CREATE INDEX IF NOT EXISTS task_metrics_task on task_metrics(task);
+            CREATE INDEX IF NOT EXISTS task_metrics_ts on task_metrics(ts, ts2)
             --sql
-            CREATE INDEX IF NOT EXISTS task_metrics_metric on task_metrics(metric, state);
+            CREATE INDEX IF NOT EXISTS task_metrics_metric on task_metrics(task, metric);
+            --sql
+            CREATE INDEX IF NOT EXISTS task_metrics_metric_state ON task_metrics(metric, state) WHERE state='tagged'
             --sql
             CREATE TABLE IF NOT EXISTS events(ts datetime, task int, project phid, user phid, event, old text, new text);
             --sql
@@ -258,11 +260,11 @@ class Config:
             CREATE VIEW IF NOT EXISTS
                 weeks AS
                 WITH RECURSIVE dates(date) AS (
-                    VALUES(date('now', 'weekday 0', '-1344 days'))
+                    VALUES(date('now', 'weekday 0', '-1095 days'))
                     UNION ALL
                     SELECT date(date, '+7 days')
                     FROM dates
-                    WHERE date <= date('now', 'weekday 0', '+7 days')
+                    WHERE date <= date('now')
                 )
                 SELECT date FROM dates;
             --sql
@@ -287,7 +289,7 @@ class Config:
                 t.task,
                 t.metric,
                 t.state,
-                coalesce(w.date, date(t.ts, 'unixepoch', 'weekday 0')) as weekdate
+                COALESCE(w.date, DATE(t.ts, 'unixepoch', 'weekday 0')) AS weekdate
             FROM task_metrics t
             LEFT JOIN days w ON w.date > t.ts AND w.date < t.ts2;
 
@@ -298,11 +300,11 @@ class Config:
                 task_metrics_summary AS
             SELECT
                 task,
-                count(*) as transactions,
-                datetime(min(ts), 'unixepoch') as first_ts,
-                datetime(max(ts2), 'unixepoch') as last_ts,
-                sum(duration)/(60*60) as duration_in_hours,
-                sum(duration)/(60*60*24) as duration_in_days
+                COUNT(*) as transactions,
+                DATETIME(MIN(ts), 'unixepoch') AS first_ts,
+                DATETIME(MAX(ts2), 'unixepoch') AS last_ts,
+                SUM(duration)/(60*60) AS duration_in_hours,
+                SUM(duration)/(60*60*24) AS duration_in_days
             FROM task_metrics
             GROUP by task, metric;
 
@@ -312,10 +314,10 @@ class Config:
             CREATE VIEW IF NOT EXISTS
                 project_tasks_per_week AS
             SELECT
-                 count(task) AS task,
-                 metric, p.name as project_name,
-                 date(ts, 'unixepoch', 'weekday 1') as week,
-                 sum(duration) as duration
+                 COUNT(task) AS task,
+                 metric, p.name AS project_name,
+                 DATE(ts, 'unixepoch', 'weekday 1') AS week,
+                 SUM(duration) AS duration
             FROM
                 task_metrics m
             JOIN
@@ -324,15 +326,15 @@ class Config:
             GROUP BY metric, week
             ORDER BY week;
             --sql
-            DROP VIEW IF EXISTS enabled_columns_and_milestones;
+            DROP VIEW IF EXISTS `enabled_columns_and_milestones`;
             --sql
             CREATE VIEW IF NOT EXISTS
                 enabled_columns_and_milestones AS
             SELECT
                 c.name,
-                c.project as project,
+                c.project AS project,
                 c.phid AS phid,
-                c.proxyPHID as milestone_phid,
+                c.proxyPHID AS milestone_phid,
                 p.uri AS milestone_uri
             FROM ProjectColumn c
             LEFT JOIN
@@ -342,8 +344,95 @@ class Config:
             WHERE
               CAST(c.status as int) = 0;
             --sql
+            CREATE VIEW IF NOT EXISTS ActiveProjectsView AS WITH RECURSIVE pp(phid, name, path, root) AS
+            (
+                SELECT
+                phid,name,name AS path, phid AS root
+                FROM
+                Project
+                WHERE
+                parent IS NULL AND status='open'
+                UNION ALL
+                SELECT
+                Project.phid,
+                Project.name AS name,
+                pp.path||':'||Project.name AS path,
+                pp.root AS root
+                FROM Project
+                JOIN pp ON Project.parent = pp.phid AND status='open'
+            )
+            SELECT
+                pp.path AS path,
+                pp.root AS root,
+                Project.fullName AS label,
+                Project.name AS name,
+                Project.phid AS key,
+                Project.phid AS phid,
+                Project.parent AS parent,
+                Project.uri AS href,
+                Project.depth AS depth,
+                Project.slug AS slug
+            FROM
+                Project
+            JOIN
+                pp
+            ON
+                Project.phid=pp.phid AND status='open'
+            ORDER BY
+                path;
+            --sql
+            DROP TABLE IF EXISTS `ActiveProjectsCache`;
+            --sql
+            CREATE TABLE IF NOT EXISTS ActiveProjectsCache AS SELECT * FROM `ActiveProjectsView`;
+            --sql
+            CREATE INDEX IF NOT EXISTS ActiveProjects_root on ActiveProjectsCache(root);
+            --sql
+            CREATE UNIQUE INDEX IF NOT EXISTS ActiveProjects_phid on ActiveProjectsCache(phid);
+            --sql
+            CREATE INDEX IF NOT EXISTS ActiveProjects_parent on ActiveProjectsCache(parent);
+            --sql
             analyze;
         """
+        BoolStr = Union[bool,str]
+        OptionalStr = Optional[str]
+        def RecreateSQL(what:Callable, name:str, ON:OptionalStr=None, AS:OptionalStr=None, UNIQUE:BoolStr=""):
+            nonlocal db
+            ON = f"ON {ON} " if ON else ""
+            AS = f"AS {AS} " if AS else ""
+            sql = f"""
+                    DROP {what()} IF EXISTS {name};
+                    CREATE {what(withQualifiers=True)} {name} {ON}{AS};
+                    """
+            sql = [line.strip() + ";" for line in sql.split(";")]
+            sql = "\n".join(sql)
+            sql.splitlines()
+            try:
+                self.console.log(sql)
+                db.executescript(sql)
+            except Exception as e:
+                self.console.log(f"Error executing sql: {e}", "This is the SQL that failed: {sql}")
+                raise
+
+        def ON(sql) -> str:
+            return f"ON {sql}"
+
+        def AS(sql) -> str:
+            return f"AS {sql}"
+
+        def WHAT(what:str, unique=False) -> Callable:
+            qualifiers = "UNIQUE " if unique else ""
+            def index(withQualifiers=False) -> str:
+                nonlocal qualifiers
+                qualifiers = qualifiers if withQualifiers else ""
+                return f"{qualifiers}{what}"
+            return index
+
+        def TABLE(unique=False) -> Callable:
+            return WHAT("TABLE", unique)
+
+        def INDEX(unique=False) -> Callable:
+            return WHAT("INDEX", unique)
+
         try:
             schemas = schema.split('--sql')
             for schema in schemas:
@@ -352,6 +441,11 @@ class Config:
             self.console.log("IntegrityError while initializing database schema.")
             self.console.log("Schema section that failed: ", schema)
             raise
+
+        RecreateSQL(TABLE(), "ActiveProjectsCache", AS="SELECT * FROM `ActiveProjectsView`")
+        RecreateSQL(INDEX(), "ActiveProjects_root", ON="ActiveProjectsCache(root)")
+        RecreateSQL(INDEX(unique=True), "ActiveProjects_phid", ON="ActiveProjectsCache(phid)")
+        RecreateSQL(INDEX(), "ActiveProjects_parent", ON="ActiveProjectsCache(parent)")
 
 
 def config(

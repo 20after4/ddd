@@ -1,4 +1,4 @@
-import Tonic from '@optoolco/tonic';
+import Tonic from '@operatortc/tonic';
 import Autocomplete from "@trevoreyre/autocomplete-js";
 import DashboardApp from './DashboardApp.js';
 import { DataSource } from './datasource.js';
