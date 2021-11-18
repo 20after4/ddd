@@ -8186,7 +8186,7 @@
   });
 
   // www/static/DashboardApp.js
-  var import_tonic7 = __toModule(require_tonic());
+  var import_tonic6 = __toModule(require_tonic());
 
   // www/static/TonicIcon.js
   var import_tonic = __toModule(require_tonic());
@@ -8256,13 +8256,10 @@
   var import_loader = __toModule(require_loader());
 
   // www/static/datasource.js
-  var import_tonic4 = __toModule(require_tonic());
-
-  // www/static/tonic.js
-  var import_tonic2 = __toModule(require_tonic());
-  var tonic_default = import_tonic2.default;
+  var import_tonic3 = __toModule(require_tonic());
 
   // www/static/dom.js
+  var import_tonic2 = __toModule(require_tonic());
   var Query = class {
     constructor() {
       this.valid_search_params = ["project", "date_start", "date_end"];
@@ -8365,11 +8362,16 @@
     }
   };
   __name(Query, "Query");
-  var DependableComponent = class extends tonic_default {
+  var DependableComponent = class extends import_tonic2.default {
     constructor() {
       super();
-      this.baseurl = "/";
       this.hasResolved = false;
+    }
+    ele(selector) {
+      return this.querySelector(selector);
+    }
+    inp(selector) {
+      return this.querySelector(selector);
     }
     debug(...args) {
       if (DependableComponent.debug_logging) {
@@ -8383,6 +8385,9 @@
       if (DependableComponent.logging) {
         console.log(...args);
       }
+    }
+    get base_url() {
+      return window["BASE_URL"] || DependableComponent._base_url;
     }
     async waitfor(id3) {
       const myid = this.id;
@@ -8415,6 +8420,7 @@
     }
   };
   __name(DependableComponent, "DependableComponent");
+  DependableComponent._base_url = "/";
   DependableComponent._waitingFor = {};
   DependableComponent.debug_logging = true;
   DependableComponent.logging = true;
@@ -8638,9 +8644,9 @@
     if (data_initdone) {
       return true;
     }
-    import_tonic4.default.add(DataSource);
-    import_tonic4.default.add(StaticDataSet);
-    import_tonic4.default.add(DataSet);
+    import_tonic3.default.add(DataSource);
+    import_tonic3.default.add(StaticDataSet);
+    import_tonic3.default.add(DataSet);
     data_initdone = true;
     return false;
   }
@@ -9043,9 +9049,8 @@
   var autocomplete_esm_default = Autocomplete;
 
   // www/static/filter-input.js
-  var import_tonic5 = __toModule(require_tonic());
+  var import_tonic4 = __toModule(require_tonic());
   var import_luxon = __toModule(require_luxon());
-  initDataSets();
   function dispatchChangeEvent(target2, value3) {
     const event2 = new CustomEvent("change", {
       bubbles: true,
@@ -9082,7 +9087,8 @@
     set changed(val) {
       this.state.changed = val;
     }
-    blur(e3) {
+    blur() {
+      const e3 = arguments[0];
       if (this.changed) {
         this.changed = false;
         dispatchChangeEvent(this, this.value);
@@ -9202,13 +9208,14 @@
       return this.html`
         <div class="autocomplete filter-group" data-expanded="false" data-loading="false" data-position="below">
           <input class="autocomplete-input" controller="${this.id}" name="${this.id}_text" id="${this.id}_text" placeholder="Enter project name or #hashtag">
-          <tonic-icon class='x' symbol-id="icon-x-square" src="/static/icons.svg" fill="black" size="24px"></tonic-icon>
+          <tonic-icon class='x' symbol-id="icon-x-square" src="${this.base_url}static/icons.svg" fill="black" size="24px"></tonic-icon>
           <ul class="autocomplete-result-list"></ul>
           <input type="hidden" name="${this.id}" controller="${this.id}" class='filter-input' id="${this.id}">
         </div>
       `;
     }
-    click(e3) {
+    click() {
+      const e3 = arguments[0];
       try {
         const icon = e3.target.closest("tonic-icon");
         if (icon && icon.classList.contains("x")) {
@@ -9256,7 +9263,7 @@
       this.changed = true;
       try {
         if (val != "") {
-          const x5 = this.querySelector(".x");
+          const x5 = this.ele(".x");
           x5.style.visibility = "visible";
         }
       } catch (err) {
@@ -9265,13 +9272,13 @@
     }
     get value() {
       if (!this.query[this.id]) {
-        var hiddeninput = this.querySelector("input[type=hidden]");
+        var hiddeninput = this.inp("input[type=hidden]");
         return hiddeninput.value;
       }
       return this.query[this.id];
     }
     connected() {
-      this.input = this.querySelector(".autocomplete-input");
+      this.input = this.inp(".autocomplete-input");
       const self = this;
       const state = this.state;
       fetchData("project_tree").then(function(data3) {
@@ -9386,7 +9393,7 @@
       return this.query[this.id];
     }
     set value(val) {
-      this.querySelector("#filter_" + this.id).value = val;
+      this.inp("#filter_" + this.id).value = val;
     }
     render() {
       const id3 = this.id;
@@ -9439,22 +9446,23 @@
     }
     get(id3) {
       try {
-        return this.querySelector("#" + id3).value;
+        return this.inp("#" + id3).value;
       } catch (err) {
         return this.query[id3];
       }
     }
     set start(val) {
       const id3 = this.id + "_start";
-      this.querySelector("#" + id3).value = val;
+      this.inp("#" + id3).value = val;
     }
     set end(val) {
       const id3 = this.id + "_end";
-      this.querySelector("#" + id3).value = val;
+      this.inp("#" + id3).value = val;
     }
     disconnected() {
     }
-    click(e3) {
+    click() {
+      const e3 = arguments[0];
       const href2 = e3.target.getAttribute("href");
       if (!href2) {
         return;
@@ -9615,11 +9623,11 @@
     }
   };
   __name(TabItem, "TabItem");
-  import_tonic5.default.add(TabItem);
-  import_tonic5.default.add(NavTabs);
+  import_tonic4.default.add(TabItem);
+  import_tonic4.default.add(NavTabs);
 
   // www/static/vega-tonic.js
-  var import_tonic6 = __toModule(require_tonic());
+  var import_tonic5 = __toModule(require_tonic());
 
   // node_modules/fast-json-patch/module/core.mjs
   var core_exports = {};
@@ -67228,7 +67236,7 @@
           },
           ...this.state.display
         };
-        embed(this.querySelector(".vega-embed"), spec, { renderer: "svg", actions: false, ...this.props.options }).then((result) => {
+        embed(this.ele(".vega-embed"), spec, { renderer: "svg", actions: false, ...this.props.options }).then((result) => {
           this.state.vega = result;
           this.state.view = result.view;
           if (result.view) {
@@ -67299,7 +67307,7 @@
         <label class="btn btn-outline-secondary btn-sm ${btn.id}" for="${this.id}-${btn.id}"><span class="visually-hidden">${btn.title}</span>
           <tonic-icon title="${btn.title}" symbol-id="${btn.icon}"
           alt="${btn["alt"]}"
-          src="${this.baseurl}static/icons.svg"
+          src="${this.base_url}static/icons.svg"
           fill="${btn["color"] ?? "black"}"
           size="20px"></tonic-icon>
         </label>
@@ -67315,19 +67323,22 @@
     }
   };
   __name(ButtonGroup, "ButtonGroup");
-  import_tonic6.default.add(ButtonGroup);
+  import_tonic5.default.add(ButtonGroup);
 
   // www/static/DashboardApp.js
   var import_luxon2 = __toModule(require_luxon());
   function initApp() {
-    import_tonic7.default.add(TonicIcon);
-    import_tonic7.default.add(import_loader.default.TonicLoader, "tonic-loader");
-    import_tonic7.default.add(AutocompleteFilter);
-    import_tonic7.default.add(InputFilter);
-    import_tonic7.default.add(DaterangeFilter);
-    import_tonic7.default.add(VegaChart);
+    if (window["BASE_URL"])
+      DependableComponent._base_url = window["BASE_URL"];
     initDataSets();
-    import_tonic7.default.add(DashboardApp);
+    import_tonic6.default.add(TonicIcon);
+    import_tonic6.default.add(import_loader.default.TonicLoader, "tonic-loader");
+    import_tonic6.default.add(AutocompleteFilter);
+    import_tonic6.default.add(InputFilter);
+    import_tonic6.default.add(DaterangeFilter);
+    import_tonic6.default.add(VegaChart);
+    import_tonic6.default.add(DashboardApp);
+    initDataSets();
     const app = document.getElementsByTagName("dashboard-app")[0];
     console.log("---------------- init ----------------");
   }
@@ -67339,7 +67350,7 @@
       this.addEventListener("change", this.change);
       const form2 = this.querySelector("form");
       this.submitListener = (e3) => {
-        this.submit(e3, this);
+        this.submit(e3);
       };
       this.popstateListener = (e3) => {
         window.setTimeout(() => {
@@ -67354,7 +67365,7 @@
           chart.loadcharts();
         }
         this.loadContent(this.query.url);
-      }, 100);
+      }, 3e3);
     }
     update_state_listeners() {
       if (this.query.change_count) {
@@ -67389,7 +67400,7 @@
         ele.setState(this.query);
       }
     }
-    submit(e3, originalTarget) {
+    submit(e3) {
       if (e3) {
         e3.preventDefault();
         e3.stopPropagation();
@@ -67412,9 +67423,6 @@
       for (const ele of invalidated) {
         this.debug("rerender", ele);
         ele.reRender();
-      }
-      for (const c2 of this.querySelectorAll(".stateful-component")) {
-        c2.setState(this.query);
       }
       this.loadContent(this.query.url);
       return false;

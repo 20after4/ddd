@@ -222,7 +222,7 @@ class VegaChart extends DependableComponent {
                 },
                 ...this.state.display
             };
-            vegaEmbed(this.querySelector('.vega-embed'), spec, { renderer: "svg", actions: false, ...this.props.options }).then((result) => {
+            vegaEmbed(this.ele('.vega-embed'), spec, { renderer: "svg", actions: false, ...this.props.options }).then((result) => {
                 this.state.vega = result;
                 this.state.view = result.view;
                 if (result.view) {
@@ -296,7 +296,7 @@ class ButtonGroup extends DependableComponent {
         <label class="btn btn-outline-secondary btn-sm ${btn.id}" for="${this.id}-${btn.id}"><span class="visually-hidden">${btn.title}</span>
           <tonic-icon title="${btn.title}" symbol-id="${btn.icon}"
           alt="${btn['alt']}"
-          src="${this.baseurl}static/icons.svg"
+          src="${this.base_url}static/icons.svg"
           fill="${btn['color'] ?? 'black'}"
           size="20px"></tonic-icon>
         </label>

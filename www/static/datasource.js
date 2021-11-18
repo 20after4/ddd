@@ -77,17 +77,6 @@ class DataSource extends DependableComponent {
     `;
     }
 }
-class PHIDCache extends DependableComponent {
-    get(phid) {
-        if (!this.phids[phid]) {
-            this.phids[phid] = this.lookup(phid);
-        }
-        return this.phids[phid];
-    }
-    lookup(phid) {
-        const url = `${this.baseurl}metrics/phobjects.json?phid=${phid}`;
-    }
-}
 class BaseDataSet extends DependableComponent {
     constructor() {
         super();

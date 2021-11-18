@@ -9,15 +9,18 @@ import { DateTime } from "luxon";
 
 
 function initApp() {
+  if (window['BASE_URL'])
+    DependableComponent._base_url = window['BASE_URL'];
+  initDataSets();
   Tonic.add(TonicIcon);
   Tonic.add(TonicLoader.TonicLoader, 'tonic-loader');
   Tonic.add(AutocompleteFilter);
   Tonic.add(InputFilter);
   Tonic.add(DaterangeFilter);
   Tonic.add(VegaChart);
-  initDataSets();
-  Tonic.add(DashboardApp);
 
+  Tonic.add(DashboardApp);
+  initDataSets();
   const app = <DashboardApp> <unknown>document.getElementsByTagName('dashboard-app')[0];
 
 
@@ -27,6 +30,9 @@ function initApp() {
 
 class DashboardApp extends DependableComponent {
   query:Query;
+  submitListener:any;
+  popstateListener:any;
+
   constructor() {
     super();
     this.query = Query.init();
@@ -36,7 +42,7 @@ class DashboardApp extends DependableComponent {
 
     const form = this.querySelector('form');
     this.submitListener = (e) => {
-      this.submit(e, this);
+      this.submit(e);
     }
     this.popstateListener = (e) => {
       window.setTimeout(() => {
@@ -48,17 +54,18 @@ class DashboardApp extends DependableComponent {
     this.setState(this.query);
 
     setTimeout(()=>{
+
       for (const chart of document.querySelectorAll('vega-chart')) {
         (chart as unknown as VegaChart).loadcharts();
       }
       this.loadContent(this.query.url);
-    },100);
+    },3000);
 
   }
 
   update_state_listeners() {
     if (this.query.change_count) {
-      for (const ele of this.querySelectorAll(`[data-state="*"]`)) {
+      for (const ele of this.querySelectorAll(`[data-state="*"]`) as any as DataSet[]) {
         ele.stateChanged('project', this.query.state_changes);
       }
     }
@@ -89,18 +96,19 @@ class DashboardApp extends DependableComponent {
   setState(state=null) {
     console.log('setState');
     //this.update_state_listeners();
-    for (const ele of this.querySelectorAll('.filter')) {
+    for (const ele of this.querySelectorAll('.filter') as any as InputFilter[]) {
       console.log('setState',ele,this.query);
       ele.setState(this.query);
     }
   }
 
-  submit(e, originalTarget){
+  submit(e?){
+    //const e = arguments[0];
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    for (var child of this.querySelectorAll('.filter')) {
+    for (var child of this.querySelectorAll('.filter') as any as InputFilter[]) {
       if (child['modifyState']) {
         child.modifyState(this.query);
       }
@@ -110,7 +118,7 @@ class DashboardApp extends DependableComponent {
 
     const invalidated:Set<BaseDataSet> = new Set();
     for (const k in state_changes) {
-      for (const ele of this.querySelectorAll(`[data-state~="${k}"], [data-state="*"]`)) {
+      for (const ele of this.querySelectorAll(`[data-state~="${k}"], [data-state="*"]`) as any as DataSet[]) {
         ele.stateChanged(k, state_changes);
         invalidated.add(ele);
       }
@@ -124,9 +132,6 @@ class DashboardApp extends DependableComponent {
       ele.reRender();
     }
 
-    for (const c of this.querySelectorAll('.stateful-component')) {
-      c.setState(this.query);
-    }
     this.loadContent(this.query.url);
     return false;
   }

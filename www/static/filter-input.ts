@@ -5,8 +5,8 @@ import {fetchData, initDataSets} from './datasource.js'
 import {DependableComponent, Query} from "./dom.js"
 import TonicIcon from '@operatortc/components/icon'
 import { DateTime } from "luxon";
+import {DashboardApp} from './DashboardApp.js'
 
-initDataSets();
 
 async function findTasks(tasks:string) {
   var ids = tasks.split(' ');
@@ -54,7 +54,9 @@ class FilterBase extends DependableComponent {
   set changed(val) {
     this.state.changed=val;
   }
-  blur(e) {
+
+  blur() {
+    const e = arguments[0];
     if (this.changed){
       this.changed=false;
       dispatchChangeEvent(this, this.value);
@@ -181,14 +183,15 @@ class AutocompleteFilter extends FilterBase {
     return this.html`
         <div class="autocomplete filter-group" data-expanded="false" data-loading="false" data-position="below">
           <input class="autocomplete-input" controller="${this.id}" name="${this.id}_text" id="${this.id}_text" placeholder="Enter project name or #hashtag">
-          <tonic-icon class='x' symbol-id="icon-x-square" src="/static/icons.svg" fill="black" size="24px"></tonic-icon>
+          <tonic-icon class='x' symbol-id="icon-x-square" src="${this.base_url}static/icons.svg" fill="black" size="24px"></tonic-icon>
           <ul class="autocomplete-result-list"></ul>
           <input type="hidden" name="${this.id}" controller="${this.id}" class='filter-input' id="${this.id}">
         </div>
       `;
   }
 
-  click(e) {
+  click() {
+    const e = arguments[0];
     try {
       const icon = e.target.closest('tonic-icon');
       if (icon && icon.classList.contains('x')) {
@@ -211,7 +214,7 @@ class AutocompleteFilter extends FilterBase {
   async setState(query) {
     this.query = query;
     if (query[this.id]) {
-      var hiddeninput = this.querySelector('input[type=hidden]');
+      var hiddeninput = this.querySelector('input[type=hidden]') as HTMLInputElement;
       var val = query[this.id];
       if (val['phid']) {
         hiddeninput.value = val['phid'];
@@ -237,7 +240,7 @@ class AutocompleteFilter extends FilterBase {
     this.changed = true;
     try {
       if (val != '') {
-        const x = this.querySelector('.x');
+        const x = this.ele('.x');
         x.style.visibility = 'visible';
       }
     } catch (err) {
@@ -249,14 +252,14 @@ class AutocompleteFilter extends FilterBase {
 
   get value() {
     if (!this.query[this.id]){
-      var hiddeninput = this.querySelector('input[type=hidden]');
+      var hiddeninput = this.inp('input[type=hidden]');
       return hiddeninput.value;
     }
     return this.query[this.id];
   }
 
   connected() {
-    this.input = this.querySelector('.autocomplete-input');
+    this.input = this.inp('.autocomplete-input');
     const self = this;
     const state = this.state;
 
@@ -379,7 +382,7 @@ class InputFilter extends FilterBase {
     return this.query[this.id]
   }
   set value(val) {
-    this.querySelector('#filter_'+this.id).value = val;
+    this.inp('#filter_'+this.id).value = val;
   }
   render(){
     const id = this.id;
@@ -439,24 +442,25 @@ class DaterangeFilter extends InputFilter {
   }
   get(id:string) {
     try {
-      return this.querySelector('#'+id).value
+      return this.inp('#'+id).value
     } catch(err) {
       return this.query[id];
     }
   }
   set start(val) {
     const id=this.id+'_start'
-    this.querySelector('#'+id).value = val
+    this.inp('#'+id).value = val
   }
 
   set end(val) {
     const id=this.id+'_end'
-    this.querySelector('#'+id).value = val
+    this.inp('#'+id).value = val
   }
   disconnected(){
 
   }
-  click(e) {
+  click() {
+    const e = arguments[0];
     const href:string = e.target.getAttribute('href');
     if (!href){
       return;
@@ -472,7 +476,7 @@ class DaterangeFilter extends InputFilter {
         this.end = values[1].substring(idx+1);
       }
       this.start = value;
-      const app = this.closest('dashboard-app');
+      const app = this.closest('dashboard-app') as DashboardApp;
       setTimeout(function(){
         app.submit();
       }, 100);
@@ -608,7 +612,7 @@ class TabItem extends DependableComponent {
     this.props.value = val;
     this.setAttribute('value', this.props.value);
     if (this.isTrue(val)) {
-      this.parentElement.selected = this;
+      (this.parentElement as any as NavTabs).selected = this;
       this.classList.remove('hidden');
       this.classList.add('active');
     } else {

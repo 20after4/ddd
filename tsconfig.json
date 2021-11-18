@@ -10,32 +10,13 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "baseUrl": "./www/",
+    //"declaration": true,
     "moduleResolution": "node",
-    "typeRoots": [ "./types", "./node_modules/@types", "../node_modules/@types"],
+    //"typeRoots": [ "./static/types", "./node_modules/@types", "../node_modules/@types"],
+
     "paths": {
         //"build/*":["static/build/*"],
-        "*": ["./www/static/*","static/*", "../node_modules/*", "node_modules/*", "*"]
-    },
-    "plugins": [
-      {
-        "name": "ts-sql-plugin",
-        "tags": { // optionnal
-          "sql": "sql",
-          "raw": "raw",
-          "cond": "cond",
-          "and": "and",
-          "or": "or",
-          "ins": "ins",
-          "upd": "upd",
-          "mock": "mock"
-        },
-        "mock": "0",
-        "cost_pattern": "/\\(cost=\\d+\\.?\\d*\\.\\.(\\d+\\.?\\d*)/",
-        "error_cost": null, // 100,
-        "warn_cost": null, // 50,
-        "info_cost": null, // -1,
-        "schema_command": "pg" // pg | mysql | custom - read the source
-      }
-    ]
+        "*": ["./www/static/*", "static/*", "../node_modules/*", "node_modules/*", "*"]
+    }
   },
 }

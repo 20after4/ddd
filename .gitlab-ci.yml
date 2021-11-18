@@ -21,13 +21,6 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-npm:
-  stage: prep
-  image: docker-registry.wikimedia.org/releng/npm6:0.1.1
-  script:
-    - apt install npm
-    - npm install
-
 venv:
   stage: prep
   script:
@@ -43,9 +36,10 @@ venv:
     - poetry build
 
 tsc:
+  image: docker-registry.wikimedia.org/releng/npm6:0.1.1
   stage: build
   script:
-    - tsc
+    - npx tsc
 
 grunt:
   image: docker-registry.wikimedia.org/releng/npm6:0.1.1
@@ -66,5 +60,5 @@ deploy-testing:
   stage: deploy
   environment: data.releng.team
   script:
-    - cp -af . /home/gitlab-runner/deploy/
+    - cp -af . /home/gitlab-runner/deploy
     - touch /home/gitlab-runner/deploy/

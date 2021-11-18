@@ -2,6 +2,10 @@
 {% extends "view.html" %}
 
 {% block extra_head %}
+<!--<script type='module' src='{{base_url}}static/DashboardApp.js'></script>-->
+<script>
+window['BASE_URL'] ='{{base_url}}';
+</script>
 <script src="{{base_url}}static/require.js" data-main='{{base_url}}static/app.js'></script>
 {% endblock %}
 {% block content %}

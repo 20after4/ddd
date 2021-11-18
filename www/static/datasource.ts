@@ -94,19 +94,19 @@ class DataSource extends DependableComponent {
   }
 }
 
-class PHIDCache extends DependableComponent {
-  get(phid) {
-    if (!this.phids[phid]) {
-      this.phids[phid] = this.lookup(phid);
-    }
+// class PHIDCache extends DependableComponent {
+//   get(phid) {
+//     if (!this.phids[phid]) {
+//       this.phids[phid] = this.lookup(phid);
+//     }
 
-    return this.phids[phid];
-  }
+//     return this.phids[phid];
+//   }
 
-  lookup(phid) {
-    const url = `${this.baseurl}metrics/phobjects.json?phid=${phid}`;
-  }
-}
+//   lookup(phid) {
+//     const url = `${this.baseurl}metrics/phobjects.json?phid=${phid}`;
+//   }
+// }
 
 interface DatasetConsumer extends HTMLElement {
   props: {"data-source": string}
@@ -115,6 +115,7 @@ interface DatasetConsumer extends HTMLElement {
 
 }
 class BaseDataSet extends DependableComponent {
+  query:Query;
   constructor() {
     super();
     this.setAttribute('data-state', '*');
@@ -138,7 +139,7 @@ class BaseDataSet extends DependableComponent {
   }
 
   get url(){
-    this.props.url = this.props.url || this.parentElement.url;
+    this.props.url = this.props.url || (this.parentElement as DataSource).url;
     return this.props.url;
   }
 
@@ -159,7 +160,7 @@ class DataSet extends BaseDataSet {
 
 
   get url(){
-    this.props.url = this.props.url || this.parentElement.url;
+    this.props.url = this.props.url || (this.parentElement as DataSource).url;
 
     var sql = this.innerText;
     const replacer = this.state.replacer || this.parentElement.replacer;

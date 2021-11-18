@@ -7,14 +7,17 @@ import { VegaChart } from './vega-tonic.js';
 import { DependableComponent, Query } from "./dom.js";
 import { DateTime } from "luxon";
 function initApp() {
+    if (window['BASE_URL'])
+        DependableComponent._base_url = window['BASE_URL'];
+    initDataSets();
     Tonic.add(TonicIcon);
     Tonic.add(TonicLoader.TonicLoader, 'tonic-loader');
     Tonic.add(AutocompleteFilter);
     Tonic.add(InputFilter);
     Tonic.add(DaterangeFilter);
     Tonic.add(VegaChart);
-    initDataSets();
     Tonic.add(DashboardApp);
+    initDataSets();
     const app = document.getElementsByTagName('dashboard-app')[0];
     console.log('---------------- init ----------------');
 }
@@ -25,7 +28,7 @@ class DashboardApp extends DependableComponent {
         this.addEventListener('change', this.change);
         const form = this.querySelector('form');
         this.submitListener = (e) => {
-            this.submit(e, this);
+            this.submit(e);
         };
         this.popstateListener = (e) => {
             window.setTimeout(() => {
@@ -40,7 +43,7 @@ class DashboardApp extends DependableComponent {
                 chart.loadcharts();
             }
             this.loadContent(this.query.url);
-        }, 100);
+        }, 3000);
     }
     update_state_listeners() {
         if (this.query.change_count) {
@@ -76,7 +79,8 @@ class DashboardApp extends DependableComponent {
             ele.setState(this.query);
         }
     }
-    submit(e, originalTarget) {
+    submit(e) {
+        //const e = arguments[0];
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -99,9 +103,6 @@ class DashboardApp extends DependableComponent {
         for (const ele of invalidated) {
             this.debug('rerender', ele);
             ele.reRender();
-        }
-        for (const c of this.querySelectorAll('.stateful-component')) {
-            c.setState(this.query);
         }
         this.loadContent(this.query.url);
         return false;

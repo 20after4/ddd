@@ -1,4 +1,4 @@
-import Tonic from './tonic.js';
+import Tonic from '@operatortc/tonic';
 function waitForID(id, context = null) {
     return new Promise(resolve => {
         var ele = document.getElementById(id);
@@ -122,8 +122,13 @@ class Query {
 class DependableComponent extends Tonic {
     constructor() {
         super();
-        this.baseurl = '/';
         this.hasResolved = false;
+    }
+    ele(selector) {
+        return this.querySelector(selector);
+    }
+    inp(selector) {
+        return this.querySelector(selector);
     }
     debug(...args) {
         if (DependableComponent.debug_logging) {
@@ -137,6 +142,9 @@ class DependableComponent extends Tonic {
         if (DependableComponent.logging) {
             console.log(...args);
         }
+    }
+    get base_url() {
+        return window['BASE_URL'] || DependableComponent._base_url;
     }
     async waitfor(id) {
         const myid = this.id;
@@ -168,6 +176,7 @@ class DependableComponent extends Tonic {
         this.hasResolved = true;
     }
 }
+DependableComponent._base_url = '/';
 DependableComponent._waitingFor = {};
 DependableComponent.debug_logging = true;
 DependableComponent.logging = true;
