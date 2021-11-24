@@ -2,19 +2,18 @@ title: Data³
 about: Data³
 about_url: https://www.mediawiki.org/wiki/Data%C2%B3
 description_html: |-
-  Try out the   <a href="/-/ddd/dashboard/project-metrics">Phabricator Metrics</a> dashboard!
+  Try out the   <a href="-/ddd/dashboard/project-metrics">Phabricator Metrics</a> dashboard!
 plugins:
   datasette-dashboards:
     project-metrics:
-      title: Data³ Phabricator Metrics
+      title: Project Metrics
       description: ""
+      tabs:
+        projects: Phabricator Projects
+        columns: Columns & Milestones
+        cycle: "Lead & Cycle Time"
       placeholder_text:
         To get started, please enter a project name or task ID at the top of the page.
-      layout:
-        - task
-        - top
-        - default
-        - bottom
       filters:
         project:
           name: Project
@@ -32,12 +31,11 @@ plugins:
           name: Date range
           type: daterange
           default: ["start_of_quarter", "now"]
-
       charts:
         task-details:
           title: Task details
           db: metrics
-          section: task
+          tab: task
           requires: task_id
           query: task_details
           library: jinja
@@ -45,7 +43,7 @@ plugins:
         task-projects:
           title: Task projects
           db: metrics
-          section: task
+          tab: task
           requires: task_id
           query: task_projects
           library: jinja
@@ -53,7 +51,7 @@ plugins:
         task-users:
           title: Task users
           db: metrics
-          section: task
+          tab: task
           requires: task_id
           query: task_users
           library: jinja
@@ -65,10 +63,11 @@ plugins:
           library: jinja
           template: task_days_in_project.html
           requires: [ task_id, project ]
+          tab: task
         task-days-in-columns:
           title: Days in project columns
           db: metrics
-          section: task
+          tab: task
           requires: [ task_id, project ]
           query: select *, next_ts - ts as duration, printf('%.0f', ((next_ts - ts) / 86400.0)) AS duration_days from (select events.*, columns.column_name, columns.project_name, columns.is_default, ifnull(LEAD(ts) OVER(ORDER BY ts), strftime('%s','now', 'localtime')) next_ts from events join columns on new = column_phid where new like '%PHID-PCOL-%' and task = :task_id and event = 'columns' and project_phid = :project order by ts);
           library: vega
@@ -79,440 +78,10 @@ plugins:
               y: { field: column_name, type: nominal, title: 'Column'  }
 
 
-        states:
-          title: Status changes
-          db: metrics
-          requires: [ project, -task_id ]
-          section: default
-          cardorder: first
-          columns: 4
-          columns_max: 6
-          query:
-            select
-              date(ts, 'unixepoch') as day,
-              date(ts, 'unixepoch', 'start of month') as month,
-              task,
-              project,
-              user,
-              event,
-              old,
-              new,
-              old||'->'||new as old_new,
-              group_concat(task) as task,
-              count(*) as count
-            from
-              events e
-            where TRUE
-            AND '' != :project
-            AND cast(e.task as INTEGER) in (select distinct cast(task as INTEGER) as task from task_metrics where metric=:project)
-            and old_new is not null
-            and event in ('status')
-            AND month >= date(:date_start)
-            AND month <= date(:date_end)
-            group by month, old_new
-            order by month
-          library: vega
-          display:
-            width: 110
-            height: 90
-            # encoding:
-            #   y: { field: count, type: quantitative, scale: { type: symlog, constant: 1 }}
 
-            #layer:
-              # - mark: { type: point, tooltip: true }
-              #   encoding:
-              #     x: { field: day, type: temporal}
-              #     y: { field: count, type: quantitative }
-            params:
-              - name: "highlight"
-                select: {"type": "point"}
-            mark:
-              type: point
-              filled: true
-              tooltip: true
-              strokeWidth: 1
-              stroke: black
-            encoding:
-                size:
-                  field: count
-                  type: quantitative
-                  #scale: { type: symlog, constant: 1 }
-                  legend: { direction: vertical, orient: right }
-                color:
-                  field: old_new
-                  title: Status (old -> new)
-                  type: ordinal
-                  order: x
-                  legend: {
-                    direction: horizontal,
-                    orient: bottom,
-                    columns: 4,
-                    symbolLimit: 20
-                  }
-                  scale: { scheme: 'yelloworangered' }
-                y: { field: old, title: Old Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
-                x: { field: new, title: New Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
-                stroke:
-                  condition:
-                    param: "highlight"
-                    empty: false
-                    value: black
-                  value: null
-                facet: { field: month, title: Month (ending date), columns: 3, type: temporal}
-        columns:
-          title: Workboard Progression
-          db: metrics
-          requires: [ project, -task_id ]
-          section: default
-          cardorder: first
-          columns: 4
-          columns_max: 6
-          query:
-            select
-              e.project as project_phid,
-              date(ts, 'unixepoch') as day,
-              date(ts, 'unixepoch', 'start of month') as month,
-              count(task) as count,
-              c.name as old,
-              n.name as new,
-              c.name||'->'||n.name as old_new
-            from
-              events e
-              join ProjectColumn c on e.old = c.phid
-              join ProjectColumn n on e.new = n.phid
-            where
-              event = "columns"
-               AND month >= date(:date_start)
-               AND month <= date(:date_end)
-               AND e.project=:project
-            group by
-              project_phid,
-              month,
-              old_new
 
-          library: vega
-          display:
-            width: 110
-            height: 90
-            params:
-              - name: "highlight"
-                select: {"type": "point"}
-            mark:
-              type: point
-              filled: true
-              tooltip: true
-              strokeWidth: 1
-              stroke: black
-            encoding:
-                size:
-                  field: count
-                  type: quantitative
-                  legend: { direction: vertical, orient: right }
-                color:
-                  field: old_new
-                  title: old -> new
-                  type: nominal
-                  legend: {
-                    direction: horizontal,
-                    orient: bottom,
-                    columns: 3,
-                    symbolLimit: 20
-                  }
-                  scale: { scheme: 'category20b' }
-                y: { field: old, title: Old Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
-                x: { field: new, title: New Status, type: nominal, axis: {grid: true, tickBand: "extent"}}
-                stroke:
-                  condition:
-                    param: "highlight"
-                    empty: false
-                    value: black
-                  value: null
-                facet: { field: month, title: Month (ending date), columns: 3, type: temporal, margin: 5}
-        burnup:
-          title: Burnup
-          db: metrics
-          requires: [ project, -task_id ]
-          section: default
-          columns: 6
-          columns_max: 12
-          cardorder: last
-          query:
-            SELECT
-              distinct count(distinct task) as value,
-              ph.name as state_name,
-              ph.phid as state_phid,
-              w.date as week,
-              max(date(m.ts, 'unixepoch')) as ts,
-              max(date(m.ts2, 'unixepoch')) as ts2
-            FROM
-              task_metrics m
-              JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)
-              JOIN (
-                select
-                  distinct date
-                from
-                  weeks
-              ) w on date(w.date) >= date(m.ts, 'unixepoch')
-            WHERE TRUE
-                AND date(m.ts, 'unixepoch') >= date(:date_start)
-                AND m.metric = :project
-                AND state not in ('created', 'tagged', 'untagged')
-                AND (not state like 'PHID-PROJ-%')
-                AND week >= date(:date_start)
-                AND week <= date(:date_end)
-            GROUP BY
-              state_name,
-              week
-          library: vega
-          display:
-            height: 420
-            params:
-              - name: brush
-                select: { type: interval, resolv: global }
-              - name: column
-                select: { type: interval  }
-                bind: legend
-            mark: { type: area, tooltip: true, clip: true}
-            encoding:
-              x:
-                field: week
-                timeUnit: week
-                type: temporal
-                title: Week
-                #scale: { clamp: true,  padding: 0}
-              y:
-                field: value
-                title: Task Count
-                type: quantitative
-              color:
-                field: state_name
-                title: Milestone
-                type: nominal
-                scale:
-                  scheme: category20c
-        time_in_columns:
-          title: Average time tasks remain, per column
-          db: metrics
-          requires: [ project, -task_id ]
-          section: default
-          columns: 6
-          columns_max: 12
-          cardorder: last
-          query:
-            select
-              task,
-              count(*) as count,
-              state,
-              c.name as column_name,
-              date(ts, 'unixepoch') as date_start,
-              date(ts2, 'unixepoch') as date_end,
-              date(ts2, 'unixepoch', 'start of month') as month,
-              cast(avg(duration)/(60*60*24) as int) as days
-            from
-              task_metrics m
-              join ProjectColumn c on c.phid = m.state
-            where
-              metric in (
-                select
-                  phid
-                from
-                  (
-                    WITH RECURSIVE pp(phid, name, path, root) AS (
-                      SELECT
-                        phid,
-                        name,
-                        name AS path,
-                        phid as root
-                      FROM
-                        Project
-                      WHERE
-                        parent is null
-                        and status = 'open'
-                      UNION ALL
-                      SELECT
-                        Project.phid,
-                        Project.name AS name,
-                        pp.path || ':' || Project.name as path,
-                        pp.root as root
-                      FROM
-                        Project
-                        JOIN pp ON Project.parent = pp.phid
-                        and status = 'open'
-                    )
-                    SELECT
-                      pp.path AS path,
-                      pp.root as root,
-                      Project.fullName AS label,
-                      Project.name as name,
-                      Project.phid AS key,
-                      Project.phid as phid,
-                      Project.parent as parent,
-                      Project.uri AS href,
-                      Project.depth AS depth,
-                      Project.slug as slug
-                    FROM
-                      Project
-                      JOIN pp ON Project.phid = pp.phid
-                      and status = 'open'
-                    ORDER BY
-                      path
-                  )
-                where TRUE
-                  AND root = :project
-              )
-            group by
-              state
-            order by
-              days
-            limit 20
-          library: vega
-          display:
-            height: 420
-            mark: { type: bar, tooltip: true, clip: true, size: 12}
-            encoding:
-              x:
-                field: days
-                title: Days
-                type: quantitative
-              y:
-                field: column_name
-                title: Task Column
-                type: nominal
-                sort: -x
-              color:
-                field: column_name
-                title: Columns
-                type: nominal
-                scale:
-                  scheme: category20c
 
-        column-metrics:
-          title: Cumulative Sum of Tasks per workboard column.
-          db: metrics
-          requires: [ project, -column, -task_id ]
-          section: default
-          columns: 6
-          query: |-
-            select
-              month, column_name,
-              sum(value) as total_tasks
-            from
-              (
-                SELECT
-                  printf('T%u', c.task) AS task,
-                  datetime(c.ts, 'unixepoch') as ts,
-                  date(c.ts, 'unixepoch', 'start of month') as month,
-                  date(
-                    c.ts,
-                    'unixepoch',
-                    'weekday 0'
-                  ) as week,
-                  p.column_phid as column_phid,
-                  p.column_name AS column_name,
-                  p.project_phid as project_phid,
-                  p.project_name as project_name,
-                  p.project_name||':'||p.column_name AS qualified_name,
-                  p.status as column_hidden,
-                  c.value as value
-                FROM
-                  column_metrics c
-                  join columns p on c.column = p.column_phid
-                   AND column_phid=:column
-                 WHERE
-                 project_phid=:project
-                order by ts
-              )
-            where
-              column_hidden = 0
-              AND project_phid=:project
-              AND ts >= date(:date_start)
-              AND ts <= date(:date_end)
-            group by month, column_phid
-          library: vega
-          display:
-            height: 400
-            autosize: { "type": "fit", "contains": "padding" }
-            mark:
-              type: bar
-              tooltip: true
-              baseline: bottom
-              line: true
-            encoding:
-              size:
-                value: 15
-                # field: total_tasks
-                # type: quantitative
-                # aggregate: sum
-              x:
-                field: month
-                title: Month
-                type: temporal
-                #timeUnit: month
-              color:
-                field: column_name
-                title: Column
-                type: nominal
-              y:
-                field: total_tasks
-                title: Task Count
-                type: quantitative
-                scale:
-                  scheme: "blueorange"
-              # facet:
-              #   columns: 3
-              #   field: month
-              #   type: nominal
-        most-active-projects:
-          title: Busiest Projects (by number of tagged tasks)
-          db: metrics
-          section: default
-          requires: [ -project, -task_id]
-          query: |-
-            SELECT
-              DISTINCT metric AS project_phid,
-              m.state,
-              p.label AS project_name,
-              p.root as root,
-              COUNT(DISTINCT task) AS tasks
-            FROM
-              task_metrics m
-              JOIN ActiveProjectsCache p ON p.phid = m.metric
-              and m.state = 'tagged'
-            where TRUE
-              AND date(ts,'unixepoch') >= date(:date_start)
-              AND date(ts,'unixepoch') <= date(:date_end)
-            GROUP BY
-              root
-            HAVING
-              tasks > 20 and project_name != 'Patch-For-Review'
-            ORDER BY
-              tasks DESC
-            LIMIT 12;
-          library: vega
-          display:
-            height: 420
-            autosize: { "type": "fit", "contains": "padding" }
-            config: { legend: { disable: true  } }
-            mark:
-              type: bar
-              tooltip: true
-              line: true
-            encoding:
-              size:
-                value: 10
-              y:
-                field: project_name
-                type: nominal
-                sort: -x
-              color:
-                field: project_name
-                type: nominal
-                sort: -x
-                scale:
-                  scheme: "tableau20"
-              x:
-                field: tasks
-                type: quantitative
+
 
 
 databases:
@@ -712,10 +281,6 @@ databases:
             task, old, new
           ORDER BY
             task_count desc
-      test_query:
-        title: test title 123
-        sql: SELECT * from task_metrics where task=:task_id
-        #sql: SELECT * from Project where name=:project_name
       task_any_assignee:
         title: All tasks assigned to user in any capacity
         sql: |-

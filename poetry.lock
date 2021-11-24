@@ -8,7 +8,7 @@ python-versions = ">=3.6,<4.0"
 
 [[package]]
 name = "anyio"
-version = "3.3.4"
+version = "3.4.0"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
 category = "main"
 optional = false
@@ -20,7 +20,7 @@ sniffio = ">=1.1"
 
 [package.extras]
 doc = ["sphinx-rtd-theme", "sphinx-autodoc-typehints (>=1.2.0)"]
-test = ["coverage[toml] (>=4.5)", "hypothesis (>=4.0)", "pytest (>=6.0)", "pytest-mock (>=3.6.1)", "trustme", "uvloop (<0.15)", "mock (>=4)", "uvloop (>=0.15)"]
+test = ["coverage[toml] (>=4.5)", "hypothesis (>=4.0)", "pytest (>=6.0)", "pytest-mock (>=3.6.1)", "trustme", "contextlib2", "uvloop (<0.15)", "mock (>=4)", "uvloop (>=0.15)"]
 trio = ["trio (>=0.16)"]
 
 [[package]]
@@ -73,7 +73,7 @@ tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>
 
 [[package]]
 name = "black"
-version = "21.11b0"
+version = "21.11b1"
 description = "The uncompromising code formatter."
 category = "dev"
 optional = false
@@ -84,7 +84,7 @@ click = ">=7.1.2"
 mypy-extensions = ">=0.4.3"
 pathspec = ">=0.9.0,<1"
 platformdirs = ">=2"
-regex = ">=2020.1.8"
+regex = ">=2021.4.4"
 tomli = ">=0.2.6,<2.0.0"
 typing-extensions = [
     {version = ">=3.10.0.0", markers = "python_version < \"3.10\""},
@@ -170,12 +170,11 @@ test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
 
 [[package]]
 name = "datasette"
-version = "0.59"
+version = "0.59.3"
 description = "An open source multi-tool for exploring and publishing data"
 category = "main"
 optional = false
 python-versions = ">=3.6"
-develop = true
 
 [package.dependencies]
 aiofiles = ">=0.4,<0.8"
@@ -186,7 +185,7 @@ click-default-group = ">=1.2.2,<1.3.0"
 httpx = ">=0.20"
 hupper = ">=1.9,<2.0"
 itsdangerous = ">=1.1,<3.0"
-janus = ">=0.4,<0.7"
+janus = ">=0.6.2,<0.7"
 Jinja2 = ">=2.10.3,<3.1.0"
 mergedeep = ">=1.1.1,<1.4.0"
 pint = ">=0.9,<1.0"
@@ -198,31 +197,21 @@ uvicorn = ">=0.11,<1.0"
 [package.extras]
 docs = ["sphinx-rtd-theme", "sphinx-autobuild", "codespell"]
 rich = ["rich"]
-test = ["pytest (>=5.2.2,<6.3.0)", "pytest-xdist (>=2.2.1,<2.5)", "pytest-asyncio (>=0.10,<0.16)", "beautifulsoup4 (>=4.8.1,<4.11.0)", "black (==21.9b0)", "pytest-timeout (>=1.4.2,<2.1)", "trustme (>=0.7,<0.10)"]
-
-[package.source]
-type = "directory"
-url = "src/datasette"
+test = ["pytest (>=5.2.2,<6.3.0)", "pytest-xdist (>=2.2.1,<2.5)", "pytest-asyncio (>=0.10,<0.17)", "beautifulsoup4 (>=4.8.1,<4.11.0)", "black (==21.9b0)", "pytest-timeout (>=1.4.2,<2.1)", "trustme (>=0.7,<0.10)"]
 
 [[package]]
-name = "datasette-dashboards"
-version = "0.1.6"
-description = "Datasette plugin providing data dashboards from metadata"
+name = "datasette-block-robots"
+version = "1.0"
+description = "Datasette plugin that blocks all robots using robots.txt"
 category = "main"
 optional = false
 python-versions = "*"
-develop = true
 
 [package.dependencies]
-datasette = "*"
-datasette-render-markdown = "*"
+datasette = ">=0.50"
 
 [package.extras]
-test = ["faker", "pytest", "pytest-asyncio", "sqlite-utils"]
-
-[package.source]
-type = "directory"
-url = "src/datasette-dashboards"
+test = ["pytest", "pytest-asyncio", "httpx"]
 
 [[package]]
 name = "datasette-render-markdown"
@@ -388,14 +377,14 @@ python-versions = ">=3.7,<3.11"
 
 [[package]]
 name = "packaging"
-version = "21.2"
+version = "21.3"
 description = "Core utilities for Python packages"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-pyparsing = ">=2.0.2,<3"
+pyparsing = ">=2.0.2,<3.0.5 || >3.0.5"
 
 [[package]]
 name = "pandas"
@@ -479,11 +468,14 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "pyparsing"
-version = "2.4.7"
+version = "3.0.6"
 description = "Python parsing module"
 category = "main"
 optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+python-versions = ">=3.6"
+
+[package.extras]
+diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pytest"
@@ -653,7 +645,7 @@ test = ["pytest"]
 
 [[package]]
 name = "sqlite-utils"
-version = "3.18"
+version = "3.19"
 description = "CLI tool and Python utility functions for manipulating SQLite databases"
 category = "main"
 optional = false
@@ -766,7 +758,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = '>=3.7.3, ~=3.10.1'
-content-hash = "9fca9d26428c5f9eb851bec2d0e0acba0bc16c9c9025d8010b6282251110bfc4"
+content-hash = "1db5b91fac5bd57e173311349228bbcb1590faca28da05aa5dc05548b6d98dfa"
 
 [metadata.files]
 aiofiles = [
@@ -774,8 +766,8 @@ aiofiles = [
     {file = "aiofiles-0.7.0.tar.gz", hash = "sha256:a1c4fc9b2ff81568c83e21392a82f344ea9d23da906e4f6a52662764545e19d4"},
 ]
 anyio = [
-    {file = "anyio-3.3.4-py3-none-any.whl", hash = "sha256:4fd09a25ab7fa01d34512b7249e366cd10358cdafc95022c7ff8c8f8a5026d66"},
-    {file = "anyio-3.3.4.tar.gz", hash = "sha256:67da67b5b21f96b9d3d65daa6ea99f5d5282cb09f50eb4456f8fb51dffefc3ff"},
+    {file = "anyio-3.4.0-py3-none-any.whl", hash = "sha256:2855a9423524abcdd652d942f8932fda1735210f77a6b392eafd9ff34d3fe020"},
+    {file = "anyio-3.4.0.tar.gz", hash = "sha256:24adc69309fb5779bc1e06158e143e0b6d2c56b302a3ac3de3083c705a6ed39d"},
 ]
 asgi-csrf = [
     {file = "asgi-csrf-0.9.tar.gz", hash = "sha256:6e9d3bddaeac1a8fd33b188fe2abc8271f9085ab7be6e1a7f4d3c9df5d7f741a"},
@@ -794,8 +786,8 @@ attrs = [
     {file = "attrs-21.2.0.tar.gz", hash = "sha256:ef6aaac3ca6cd92904cdd0d83f629a15f18053ec84e6432106f7a4d04ae4f5fb"},
 ]
 black = [
-    {file = "black-21.11b0-py3-none-any.whl", hash = "sha256:0b1f66cbfadcd332ceeaeecf6373d9991d451868d2e2219ad0ac1213fb701117"},
-    {file = "black-21.11b0.tar.gz", hash = "sha256:83f3852301c8dcb229e9c444dd79f573c8d31c7c2dad9bbaaa94c808630e32aa"},
+    {file = "black-21.11b1-py3-none-any.whl", hash = "sha256:802c6c30b637b28645b7fde282ed2569c0cd777dbe493a41b6a03c1d903f99ac"},
+    {file = "black-21.11b1.tar.gz", hash = "sha256:a042adbb18b3262faad5aff4e834ff186bb893f95ba3a8013f09de1e5569def2"},
 ]
 bleach = [
     {file = "bleach-4.1.0-py2.py3-none-any.whl", hash = "sha256:4d2651ab93271d1129ac9cbc679f524565cc8a1b791909c4a51eac4446a15994"},
@@ -824,8 +816,14 @@ commonmark = [
     {file = "commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9"},
     {file = "commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60"},
 ]
-datasette = []
-datasette-dashboards = []
+datasette = [
+    {file = "datasette-0.59.3-py3-none-any.whl", hash = "sha256:3280bef537f69ae4781f10c25ff216744a3790c1a89a2b8126449c7b21ac2e5f"},
+    {file = "datasette-0.59.3.tar.gz", hash = "sha256:c16dcfef2572f75453993d2c218b436078b82dace973b659ac929d473c7c2280"},
+]
+datasette-block-robots = [
+    {file = "datasette-block-robots-1.0.tar.gz", hash = "sha256:a47299e4c8142439ba1532039cee6f8fdb76fad786cc445f9f4b0229dce359df"},
+    {file = "datasette_block_robots-1.0-py3-none-any.whl", hash = "sha256:3556381c5d61230927cc3e21c1a831b7afb0194d7a90f22c6777d0f8dc13d8f5"},
+]
 datasette-render-markdown = [
     {file = "datasette-render-markdown-2.0.tar.gz", hash = "sha256:94a07828fdfd575276309822accdcae0da2b8d2285e75a117f3c75f08c01914c"},
     {file = "datasette_render_markdown-2.0-py3-none-any.whl", hash = "sha256:9f91b876a8c5eea23926964be6e3d0e73362600e16705910b1c292f90c06901b"},
@@ -967,8 +965,8 @@ numpy = [
     {file = "numpy-1.21.4.zip", hash = "sha256:e6c76a87633aa3fa16614b61ccedfae45b91df2767cf097aa9c933932a7ed1e0"},
 ]
 packaging = [
-    {file = "packaging-21.2-py3-none-any.whl", hash = "sha256:14317396d1e8cdb122989b916fa2c7e9ca8e2be9e8060a6eff75b6b7b4d8a7e0"},
-    {file = "packaging-21.2.tar.gz", hash = "sha256:096d689d78ca690e4cd8a89568ba06d07ca097e3306a4381635073ca91479966"},
+    {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
+    {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},
 ]
 pandas = [
     {file = "pandas-1.3.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:9707bdc1ea9639c886b4d3be6e2a45812c1ac0c2080f94c31b71c9fa35556f9b"},
@@ -1021,8 +1019,8 @@ pygments = [
     {file = "Pygments-2.10.0.tar.gz", hash = "sha256:f398865f7eb6874156579fdf36bc840a03cab64d1cde9e93d68f46a425ec52c6"},
 ]
 pyparsing = [
-    {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
-    {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
+    {file = "pyparsing-3.0.6-py3-none-any.whl", hash = "sha256:04ff808a5b90911829c55c4e26f75fa5ca8a2f5f36aa3a51f68e27033341d3e4"},
+    {file = "pyparsing-3.0.6.tar.gz", hash = "sha256:d9bdec0013ef1eb5a84ab39a3b3868911598afa494f5faa038647101504e2b81"},
 ]
 pytest = [
     {file = "pytest-6.2.5-py3-none-any.whl", hash = "sha256:7310f8d27bc79ced999e760ca304d69f6ba6c6649c0b60fb0e04a4a77cacc134"},
@@ -1159,8 +1157,8 @@ sqlite-fts4 = [
     {file = "sqlite_fts4-1.0.1-py3-none-any.whl", hash = "sha256:a41b3e510df8bda50e9b1a5162a1e8ff3b92c62a1576ff5c74aaae2cedc9d4f5"},
 ]
 sqlite-utils = [
-    {file = "sqlite-utils-3.18.tar.gz", hash = "sha256:3e86d8dd5f633c4bcf78c4e1a3aa5b0f02852a602cea8134b700229598109ff6"},
-    {file = "sqlite_utils-3.18-py3-none-any.whl", hash = "sha256:29e270cc923322599d42d08417e29e7acfae5d1885616805e3aeec389ccfbf2f"},
+    {file = "sqlite-utils-3.19.tar.gz", hash = "sha256:509099fce5f25faada6e76b6fb90e8ef5ba0f1715177933a816718be0c8e7244"},
+    {file = "sqlite_utils-3.19-py3-none-any.whl", hash = "sha256:6d7ff0d030f0cc1f47415621f3cbcda9d8ccc5c8c274191ae6d023be9db0454c"},
 ]
 tabulate = [
     {file = "tabulate-0.8.9-py3-none-any.whl", hash = "sha256:d7c013fe7abbc5e491394e10fa845f8f32fe54f8dc60c6622c6cf482d25d47e4"},

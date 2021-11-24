@@ -13,19 +13,21 @@
   "dependencies": {
     "@operatortc/components": "^13.0.0",
     "@operatortc/tonic": "^14.0.0",
+    "@trevoreyre/autocomplete-js": "^2.2.0",
     "@types/luxon": "^2.0.7",
     "@typescript/lib-dom": "npm:@types/web",
-    "@trevoreyre/autocomplete-js": "^2.2.0",
     "chart.js": "^3.6.0",
-    "luxon": "^2.0.2",
     "chartjs-adapter-luxon": "^1.1.0",
     "chartjs-plugin-datalabels": "^2.0.0",
+    "jsoneditor": "^9.5.7",
+    "luxon": "^2.0.2",
     "vega": "^5",
     "vega-embed": "^6.19.1",
     "vega-lite": "^5",
     "xhr": "^2.6.0"
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^13.0.6",
     "esbuild": "^0.13.13",
     "grunt": "^1.4.1",
     "grunt-svgstore": "^2.0.0",

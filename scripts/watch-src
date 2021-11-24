@@ -3,4 +3,4 @@
 npx tsc --watch &
 sleep 2
 
-npx esbuild www/static/DashboardApp.js --bundle --outfile=www/static/app.js --target=es2020 --format=iife --platform=browser --keep-names --watch
+npx esbuild ./www/static/DashboardApp.js --bundle --outfile=www/static/app.js --target=es2020 --format=iife --platform=browser --keep-names --watch

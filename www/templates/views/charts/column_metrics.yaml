@@ -1,0 +1,35 @@
+
+title: Tasks per workboard column (monthly total).
+db: metrics
+requires: [ project, -column, -task_id ]
+tab: columns
+query: column_metrics_monthly
+type: vega
+display:
+  height: 400
+  autosize:
+    type: fit
+    contains: padding
+  mark:
+    type: bar
+    tooltip: true
+    baseline: bottom
+    line: true
+  encoding:
+    size:
+      value: 15
+    x:
+      field: month
+      title: Month
+      type: temporal
+      #timeUnit: month
+    color:
+      field: column_name
+      title: Column
+      type: nominal
+    y:
+      field: total_tasks
+      title: Task Count
+      type: quantitative
+      scale:
+        scheme: blueorange

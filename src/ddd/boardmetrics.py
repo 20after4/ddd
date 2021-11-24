@@ -139,6 +139,9 @@ def map(
     linear: Optional[bool] = Option(False),
     after: Optional[int] = Option(0),
     pages: Optional[int] = Option(1),
+    order: Optional[str] = Option('id'),
+    cursor_id: Optional[str] = Option(None),
+    reset_cursor: Optional[bool] = Option(False),
 ):
     """Gather workboard metrics from Phabricator"""
     config = ctx.meta["config"]  # type: Config
@@ -173,34 +176,49 @@ def map(
 
             arg={
                 "queryKey":"all",
-                "order": ['id'],
+                "order": [order, 'id'],
                 "attachments": {
                     "projects": True
                 },
                 "limit":100
             }
+            if after == -1:
+                with db.conn:
+                    res = db.conn.execute('select min(id) from Task')
+                    row = res.fetchone()
+                    after = row[0]
+            elif cursor_id:
+                if reset_cursor:
+                    res = db.conn.execute('update conduit_cursor set after_id=0 where name=:name', {"name": cursor_id})
+                    after = 0
+                else:
+                    res = db.conn.execute('select after_id from conduit_cursor where name=:name', {"name": cursor_id})
+                    row = res.fetchone()
+                    after = row[0]
             if after:
                 arg['after'] = after
-            r = phab.request("maniphest.search", arg
-            )
-            if pages and pages > 1:
-                for i in range(pages):
-                    console.log("Fetching next page", r.cursor)
-                    r.next_page()
-
-            for task in r.data:
+                console.log('resuming after task id '+str(after))
+            r = phab.request("maniphest.search", arg)
+            while len(r.data):
+                task = r.data.popleft()
                 task_ids.append(task.id)
                 task.save()
-
-        if not project_phid and not task_ids:
-            console.log("Either A project phid or a list of tasks are required.")
-            return False
-
-        console.log(
-            f"Fetching tasks and transactions for the project [bold blue]{project_phid}[bold blue]"
-        )
+                if pages and pages > 1 and len(r.data) < 1:
+                    pages -= 1
+                    console.log("Fetching next page", r.cursor)
+                    cursor_after = r.cursor.get("after", None)
+                    if cursor_after:
+                        r.next_page()
+                        if cursor_id:
+                            cursor_after = r.cursor.get("after", None)
+                            db.conn.execute(f'REPLACE INTO conduit_cursor values (?,?)', (cursor_id, cursor_after))
+                    else:
+                        console.log("No more pages to fetch")
 
         if project_phid:
+            console.log(
+                f"Fetching transactions for the project [bold blue]{project_phid}[/bold blue]"
+            )
             arg = {"project": project_phid, "task_ids": task_ids}
             arg = {k: arg[k] for k in ("project", "task_ids") if arg[k] is not None}
 
@@ -208,17 +226,23 @@ def map(
                 "maniphest.project.task.transactions",
                 arg,
             )
-        else:
+            transactions = r.result
+        elif task_ids:
+            console.log(
+                f"Fetching transactions for [bold blue]{len(task_ids)}[/bold blue] tasks."
+            )
             r = phab.request(
                 "maniphest.gettasktransactions",
                 {"ids": task_ids},
             )
-
-        transactions = r.result
+            transactions = r.result
+        else:
+            console.log("Either A project phid or a list of tasks are required.")
+            return False
 
     # now collect all of the formatted transaction details
     with db.conn as conn, console.status(
-        "Processing  [bold blue]transactions[/bold blue]..."
+        "Processing [bold blue]{len(transactions)}[/bold blue] transactions..."
     ) as sts:
         conn  # type: Connection
         datapoints, all_projects, all_metrics, mapped_taskids = maptransactions(
@@ -273,7 +297,7 @@ def map(
         if not linear:
             cache_tasks(config.phab, cache, mapped_taskids, sts)
         PHObject.resolve_phids(config.phab, cache)
-    console.log("Updated phobjects. All done!")
+    console.log("All done!")
 
     optimize(config)
 

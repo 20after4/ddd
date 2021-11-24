@@ -220,8 +220,8 @@ class AutocompleteFilter extends FilterBase {
         hiddeninput.value = val['phid'];
         val['value'] = val['phid'];
         this.value = val;
-      } else {
-        const projects = await fetchData('project_tree');
+      } else if (!this.state.projects) {
+        const projects = await fetchData('project_tree', true, false);
         this.state.projects = projects;
         this.value = projects.lookup('phid', val);
       }
@@ -615,6 +615,12 @@ class TabItem extends DependableComponent {
       (this.parentElement as any as NavTabs).selected = this;
       this.classList.remove('hidden');
       this.classList.add('active');
+      for (const ele of this.querySelectorAll('vega-chart')) {
+        if (ele['state'] && ele['state']['view']) {
+          ele['state']['view'].resize().run();
+        }
+      }
+      window.dispatchEvent(new Event('resize'));
     } else {
       this.classList.add('hidden');
       this.classList.remove('active');

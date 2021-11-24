@@ -8,7 +8,8 @@ from typing import Dict, Mapping, NewType, Type
 
 from datasette.app import Datasette
 from datasette.hookspecs import hookimpl
-from datasette.utils.asgi import Request, Response
+from datasette.utils import parse_metadata
+from datasette.utils.asgi import Request, Response, NotFound
 import urllib
 import urllib.parse
 from ddd import console
@@ -30,10 +31,6 @@ def extra_css_urls():
 @hookimpl
 def extra_js_urls(datasette):
     return [
-        # {
-        #     "url": datasette.urls.path("static/build/autocomplete.js"),
-        #     "module": True
-        # },
         {
             "url": "https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js",
             "sri": "sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
@@ -54,42 +51,63 @@ class DashboardView:
 class QueryView(DashboardView):
     pass
 
+class InternalError(Exception):
+    status = 500
+
+_models = {}
 
 async def ddd_view(datasette:Datasette, request, scope, send, receive):
-    # TODO: proper error handling: missing model or view should be a 404.
+    """
+    Render a "view" template with variables supplied by evaluating a "model" python
+    script. I guess that makes this the controller.
+    """
 
-    page = request.url_vars["page"]
-    model_page = page + '.py'
-    views_dir = Path(__file__).parent.parent / "templates" / "views"
-    model_file = views_dir / model_page
+    _models = {}
+    page:str = request.url_vars["page"]
+    views_path = Path(__file__).parent.parent / "templates" / "views"
+    if page not in _models:
+        model_page = page + '.py'
+        model_file = views_path / model_page
 
-    # import the model module
-    spec = importlib.util.spec_from_file_location("module.name", model_file.absolute())
+        if model_file.absolute().exists():
+            # import the model module
+            spec = importlib.util.spec_from_file_location("module.name", model_file.absolute())
+            if (spec):
+                try:
+                    model_module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(model_module) # type: ignore
+                    model_module.__name__ = f'ddd.model.{page}'
+                    _models[page] = model_module
+                except Exception as e:
+                    raise InternalError(e)
 
-    console.log("Model path:", model_file.absolute())
-    if not spec:
-        raise ImportError()
-    model_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(model_module) # type: ignore
-    model_module.__name__ = f'ddd.model.{page}'
+    if page not in _models:
+        raise NotFound()
 
     db = datasette.get_database('metrics')
     context = {
         "base_url": datasette.urls.path('/'),
+        "views_path": views_path,
         "console": console,
         "request": request,
         **request.url_vars
     }
     # augment the context with data from the model
-    context = await model_module.init_context( #type: ignore
+    context = await _models[page].init_context( #type: ignore
         datasette,
         db,
         request,
         context=context)
-    template_name = f"views/{page}.html"
+    if ('template_name' in context):
+        template_name = context['template_name']
+    else:
+        template_name = f"views/{page}.html"
     console.log('template name: ',template_name)
-    output = await datasette.render_template(template_name, context, request, page)
-    return Response.html(output)
+    try:
+        output = await datasette.render_template(template_name, context, request, page)
+        return Response.html(output)
+    except Exception as e:
+        raise NotFound(e)
 
 
 @hookimpl
@@ -107,7 +125,6 @@ def register_routes():
     def optional(part):
         """Mark a path segment as optional by wrapping it with ()?"""
         return f"?({part})?"
-
 
     return [
          (r('ddd', v('page'), optional(v('slug'))), ddd_view)
@@ -168,15 +185,15 @@ def extra_template_vars(template:str, database:str, table:str, columns:str, view
     }
 
 
-def magic_phid(key, request):
-    return 'mmodell'
+# def magic_phid(key, request):
+#     return 'mmodell'
 
 
-@hookimpl
-def register_magic_parameters(datasette):
-    return [
-        ("phid", magic_phid),
-    ]
+# @hookimpl
+# def register_magic_parameters(datasette):
+#     return [
+#         ("phid", magic_phid),
+#     ]
 
 
 @hookimpl

@@ -161,6 +161,8 @@ class DataSet extends BaseDataSet {
 
   get url(){
     this.props.url = this.props.url || (this.parentElement as DataSource).url;
+    const param_attr:string = this.props.params;
+    const params = param_attr.split(',');
 
     var sql = this.innerText;
     const replacer = this.state.replacer || this.parentElement.replacer;
@@ -182,17 +184,26 @@ class DataSet extends BaseDataSet {
       } else if (typeof(val) != 'string' && val.hasOwnProperty("toString")) {
         val = val.toString();
       }
+
       url.searchParams.set(prop, val);
     }
-
+    for (const param of params) {
+      if (!query_params[param]) {
+        // param required but missing a value
+        throw new Error('Missing query param: '+param);
+      }
+    }
     return url.href;
   }
-  async fetch(){
+  async fetch(cache=true){
     const url = this.url;
 
-    // if (this.state['data'] && this.state['data']['rows'] && this.state['data']['url'] == url) {
-    //   return new DatasetCursor(this, this.state.data, url);
-    // }
+    if (cache == true &&
+      this.state['data'] &&
+      this.state['data']['rows'] &&
+      this.state['data']['url'] == url) {
+       return new DatasetCursor(this, this.state.data, url);
+    }
 
     const res = await window.fetch(url);
     const fetched = await res.json();
@@ -200,7 +211,7 @@ class DataSet extends BaseDataSet {
 
     if (!data.rows || data.rows.length < 1) {
       //this.error('empty dataset', fetched, url);
-      throw new Error('dataset empty');
+      throw new Error('dataset empty: '+url);
     } else if(data['error']) {
       this.error('dataset.fetch: error', data);
       throw new Error('dataset fetch returned error: '+data['error']);
@@ -308,13 +319,27 @@ function initDataSets() {
   data_initdone = true;
   return false;
 }
-async function fetchData(dataset_id:string) {
+
+const fetchDataCache = {};
+
+async function fetchData(dataset_id:string, cache=true, wait=true) {
   initDataSets();
   if (!dataset_id.startsWith('ds-')){
     dataset_id = 'ds-'+dataset_id;
   }
+
   const ds = <DataSet> <unknown>document.getElementById(dataset_id);
-  return await ds.fetch();
+  if (!ds) {
+    console.log('dataset not found: ', dataset_id, ds);
+    return;
+  }
+  const promise = ds.fetch();
+  if (wait) {
+    return await promise;
+  } else {
+    return promise;
+  }
+
 }
 
 export {DataSource, BaseDataSet, DataSet, StaticDataSet, initDataSets, fetchData}

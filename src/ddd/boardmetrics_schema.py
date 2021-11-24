@@ -33,6 +33,8 @@ class Config:
         self.console.log(f"Creating db schema in {self.db_path}")
         schema = f"""
             --sql
+            CREATE TABLE IF NOT EXISTS conduit_cursor (name TEXT PRIMARY KEY, after_id int)
+            --sql
             CREATE TABLE IF NOT EXISTS column_metrics (trnsid, ts, project phid, column phid, task, type, value);
             --sql
             CREATE INDEX IF NOT EXISTS column_ts on column_metrics(column, ts);

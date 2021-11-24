@@ -1,0 +1,30 @@
+
+title: Average time tasks remain, per column
+db: metrics
+requires: [ project, -task_id ]
+tab: columns
+query: time_in_columns
+type: vega
+display:
+  height: 420
+  mark:
+    type: bar
+    tooltip: true
+    clip: true
+    size: 12
+  encoding:
+    x:
+      field: days
+      title: Days
+      type: quantitative
+    y:
+      field: column_name
+      title: Task Column
+      type: nominal
+      sort: -x
+    color:
+      field: column_name
+      title: Columns
+      type: nominal
+      scale:
+        scheme: category20c

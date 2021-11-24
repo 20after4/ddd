@@ -2,10 +2,17 @@ import Tonic from '@operatortc/tonic'
 import {DependableComponent} from "./dom.js"
 import {vegaLite, vega} from 'vega-embed'
 import vegaEmbed from 'vega-embed'
-
+import JSONEditor from './jsoneditor.js';
 import {BaseDataSet, fetchData } from './datasource.js'
 
-class VegaChart extends DependableComponent {
+class Chart extends DependableComponent {
+  constructor() {
+    super();
+    this.classList.add('chart');
+  }
+}
+
+class VegaChart extends Chart {
   constructor() {
     super();
     this.props.spec = {
@@ -15,7 +22,8 @@ class VegaChart extends DependableComponent {
       padding: 50,
       autosize: {
         type: "fit",
-        contains: "padding"
+        contains: "padding",
+        resize: true
       },
       view: {stroke: null},
       config: {
@@ -31,7 +39,7 @@ class VegaChart extends DependableComponent {
   }
   static stylesheet () {
     return `
-      vega-chart .chart-title {
+      .chart .chart-title {
         font-weight: bold;
       }
       tab-item .panel {
@@ -47,7 +55,7 @@ class VegaChart extends DependableComponent {
         border: 1px solid #ddd;
         overflow:hidden;
       }
-      vega-chart {
+      .chart {
         flex: 1 1 45%;
         position:relative;
         height: auto !important;
@@ -89,11 +97,17 @@ class VegaChart extends DependableComponent {
       }
       .view-switcher {
         position: absolute;
-        top:0;
-        right:0;
+        top:2px;
+        right:2px;
+      }
+      .view-switcher label.btn-sm {
+        padding: .15rem .3rem;
+        outline-width: 1px;
       }
 
-      vega-chart.view-table .vega-embed {
+      vega-chart.view-table .vega-embed,
+      vega-chart.view-source .vega-embed
+       {
         display:none;
       }
       vega-chart .table-view{
@@ -103,6 +117,21 @@ class VegaChart extends DependableComponent {
         position: relative;
       }
       vega-chart.view-table .table-view {
+        display: block;
+        width: 100%;
+        overflow:scroll;
+        height: 100%;
+      }
+      vega-chart .source-view{
+        display:none;
+      }
+      vega-chart .source-view pre{
+        font-family: "Source Code Pro", "DejaVu sans mono", monospace;
+      }
+      vega-chart.view-source {
+        position: relative;
+      }
+      vega-chart.view-source .source-view {
         display: block;
         width: 100%;
         overflow:scroll;
@@ -120,7 +149,8 @@ class VegaChart extends DependableComponent {
     <tonic-loader></tonic-loader>
     </div>
     <div class='table-view'>
-
+    </div>
+    <div class='source-view'>
     </div>
     `
   }
@@ -138,9 +168,13 @@ class VegaChart extends DependableComponent {
       } else if (classes.contains('view-table')) {
         this.renderTable();
         this.className = 'view-table';
+      } else if (classes.contains('view-source')) {
+        this.renderSource();
+        this.className = 'view-source';
       } else {
         this.className = 'view-normal';
       }
+      window.dispatchEvent(new Event('resize'));
     } catch(err) {
       this.debug(err, e);
     }
@@ -165,6 +199,25 @@ class VegaChart extends DependableComponent {
       out.push("</tbody></table>");
       const container = this.querySelector('.table-view');
       container.innerHTML = out.join("");
+    }
+  }
+  renderSource() {
+    if (this.state.display){
+      const out = `<div class="jsoneditor"><div>`;
+      const container = this.querySelector('.source-view');
+      container.innerHTML = out;
+      // create the editor
+      const jsoncontainer = container.querySelector(".jsoneditor")
+      const options = {
+        mode: 'code',
+        modes: ['code',  'text', 'preview'], // allowed modes
+      }
+      const jsoneditor = new JSONEditor(jsoncontainer, options)
+
+      jsoneditor.set(this.state.display)
+
+      // get json
+      const updatedJson = jsoneditor.get()
     }
   }
   datasetChanged(ds:BaseDataSet) {
@@ -241,19 +294,18 @@ class VegaChart extends DependableComponent {
 
 
         if (result.view){
+          this.classList.remove('hidden');
           if (DependableComponent.debug_logging) {
             //result.view.logLevel(vega.Debug);
           } else {
             result.view.logLevel(vega.Error);
           }
-          result.view.run();
+          result.view.resize().run();
+          window.dispatchEvent(new Event('resize'));
           this.debug('vega running', result);
-          this.classList.remove('hidden')
         }else{
           this.debug('no vega view');
         }
-
-
       }).catch((result)=>{
         try {
           this.classList.add('hidden');
@@ -297,7 +349,12 @@ class ButtonGroup extends DependableComponent {
       title: 'Tabular view of this data.',
       checked: false,
     },
-
+    {
+      id: 'view-source',
+      icon: 'icon-code-slash',
+      title: 'Chart source.',
+      checked: false,
+    },
   ]
   renderButtons() {
     var btns = [];
@@ -316,7 +373,7 @@ class ButtonGroup extends DependableComponent {
           alt="${btn['alt']}"
           src="${this.base_url}static/icons.svg"
           fill="${btn['color']??'black'}"
-          size="20px"></tonic-icon>
+          size="15px"></tonic-icon>
         </label>
       `);
     }
@@ -331,4 +388,14 @@ class ButtonGroup extends DependableComponent {
 
 }
 Tonic.add(ButtonGroup);
-export {VegaChart}
+
+
+class HtmlChart extends Chart {
+  render() {
+    return this.html`<div class='chart-title'>${this.props.title}</div>
+      ${this.elements}`;
+  }
+}
+Tonic.add(HtmlChart);
+
+export {VegaChart, HtmlChart}

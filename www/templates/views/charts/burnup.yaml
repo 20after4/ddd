@@ -1,0 +1,40 @@
+title: Burnup
+db: metrics
+requires: [ project, -task_id ]
+tab: columns
+query: burnup
+type: vega
+display:
+  height: 500
+  width: container
+  autosize:
+    resize: true
+    type: fit
+  params:
+    - name: brush
+      select:
+        type: interval
+        resolv: global
+    - name: column
+      select:
+        type: interval
+      bind: legend
+  mark:
+    type: area
+    tooltip: true
+  encoding:
+    x:
+      field: week
+      timeUnit: week
+      type: temporal
+      title: Week
+    y:
+      field: value
+      title: Task Count
+      type: quantitative
+    color:
+      field: state_name
+      title: Milestone
+      type: nominal
+      scale:
+        scheme: category20c

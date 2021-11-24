@@ -53,14 +53,18 @@ class DashboardApp extends DependableComponent {
     window.addEventListener('popstate', this.popstateListener);
     this.setState(this.query);
 
-    setTimeout(()=>{
-
-      for (const chart of document.querySelectorAll('vega-chart')) {
-        (chart as unknown as VegaChart).loadcharts();
-      }
-      this.loadContent(this.query.url);
-    },3000);
-
+    const loaded = (event?) => {
+        console.log("Content loaded");
+        for (const chart of document.querySelectorAll('vega-chart')) {
+          (chart as unknown as VegaChart).loadcharts();
+        }
+        this.loadContent(this.query.url);
+    };
+    if (document.readyState === 'loading') {  // Loading hasn't finished yet
+      document.addEventListener('DOMContentLoaded', loaded);
+    } else {  // `DOMContentLoaded` has already fired
+      loaded();
+    }
   }
 
   update_state_listeners() {

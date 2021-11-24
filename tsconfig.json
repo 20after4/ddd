@@ -12,11 +12,13 @@
     "baseUrl": "./www/",
     //"declaration": true,
     "moduleResolution": "node",
-    //"typeRoots": [ "./static/types", "./node_modules/@types", "../node_modules/@types"],
-
+    //"typeRoots": [ "./www/static/types", "./static/types", "./node_modules/@types", "../node_modules/@types"],
+    "outDir": "./www/static/js",
+    "declaration": true,
+    "declarationMap": true,
+    "declarationDir": "./www/static/types",
     "paths": {
-        //"build/*":["static/build/*"],
-        "*": ["./www/static/*", "static/*", "../node_modules/*", "node_modules/*", "*"]
+        "*": [ "./www/static/*", "./www/static/types/*", "./www/static/js/*", "./node_modules/*"]
     }
   },
 }

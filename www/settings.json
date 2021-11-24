@@ -1,6 +1,6 @@
 {
     "sql_time_limit_ms": 12000,
-    "max_returned_rows": 2000,
+    "max_returned_rows": 4000,
     "truncate_cells_html": 150,
     "default_cache_ttl": 3600,
     "cache_size_kb": 102400,

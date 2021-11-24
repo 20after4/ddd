@@ -1,0 +1,66 @@
+id: status_changes
+title: Status changes
+db: metrics
+requires:
+  - project
+  - -task_id
+tab: columns
+query: status_changes
+type: vega
+display:
+  width: 110
+  height: 90
+  params:
+    - name: highlight
+      select:
+        type: point
+  mark:
+    type: point
+    filled: true
+    tooltip: true
+    strokeWidth: 1
+    stroke: black
+  encoding:
+    size:
+      field: count
+      type: quantitative
+      legend:
+        direction: vertical
+        orient: right
+    color:
+      field: old_new
+      title: Status (old -> new)
+      type: ordinal
+      order: x
+      legend:
+        direction: horizontal
+        orient: bottom
+        columns: 4
+        symbolLimit: 20
+      scale:
+        scheme: yelloworangered
+    y:
+      field: old
+      title: Old Status
+      type: nominal
+      axis:
+        grid: true
+        tickBand: extent
+    x:
+      field: new
+      title: New Status
+      type: nominal
+      axis:
+        grid: true
+        tickBand: extent
+    stroke:
+      condition:
+        param: highlight
+        empty: false
+        value: black
+      value: null
+    facet:
+      field: month
+      title: Month (ending date)
+      columns: 3
+      type: temporal

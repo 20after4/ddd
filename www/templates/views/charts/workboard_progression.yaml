@@ -1,0 +1,63 @@
+title: Workboard Progression
+db: metrics
+requires: [ project, -task_id ]
+tab: columns
+query: workboard_progression
+type: vega
+display:
+  width: 110
+  height: 90
+  params:
+    - name: "highlight"
+      select:
+        type: "point"
+  mark:
+    type: point
+    filled: true
+    tooltip: true
+    strokeWidth: 1
+    stroke: black
+  encoding:
+      size:
+        field: count
+        type: quantitative
+        legend:
+          direction: vertical
+          orient: right
+      color:
+        field: old_new
+        title: old -> new
+        type: nominal
+        legend:
+          direction: horizontal
+          orient: bottom
+          columns: 3
+          symbolLimit: 20
+        scale:
+          scheme: 'category20b'
+      y:
+        field: old
+        title: Old Status
+        type: nominal
+        axis:
+          grid: true
+          tickBand: "extent"
+      x:
+        field: new
+        title: New Status
+        type: nominal
+        axis:
+          grid: true
+          tickBand: "extent"
+      stroke:
+        condition:
+          param: "highlight"
+          empty: false
+          value: black
+        value: null
+      facet:
+        field: month
+        title: Month (ending date)
+        type: temporal
+        columns: 3
+        margin: 5

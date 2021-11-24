@@ -7,12 +7,9 @@
 window['BASE_URL'] ='{{base_url}}';
 </script>
 <script src="{{base_url}}static/require.js" data-main='{{base_url}}static/app.js'></script>
+<link rel='stylesheet' href='{{base_url}}static/jsoneditor.css'>
 {% endblock %}
 {% block content %}
-
-
-
-
 
 
 <dashboard-app id='dashboard'>
@@ -21,18 +18,17 @@ window['BASE_URL'] ='{{base_url}}';
   <static-data-set id='ds-project_tree'
   url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400">
   </static-data-set>
-{% for id, chart in dashboard.charts.items() %}
-<data-set db='{{chart.db}}' id='ds-{{id}}' url='{{base_url}}{{chart.db}}.json?_shape=objects'>{{chart.query}}</data-set>
+{% for id,query in queries.items() %}
+<data-set db='metrics' id='ds-{{id}}' params='{{query.params|join(",") }}' url='{{base_url}}metrics/{{id}}.json?_shape=objects'>{{query.sql}}</data-set>
 {% endfor %}
-<data-set db='metrics' id='ds-default' url='http://173.17.185.55:8001/metrics/column_events.json'></data-set>
+<!--
+{% for id, chart in dashboard.charts.items() %}
+<data-set requires='{{chart.requires}}' db='{{chart.db}}' id='ds-{{id}}' url='{{base_url}}{{chart.db}}.json?_shape=objects'>{{chart.query}}</data-set>
+{% endfor %}
+-->
 </data-source>
 <form id='form_{{id}}'>
 <div class="container-fluid p-0 dashboard-filters">
-
-
-
-
-
   <autocomplete-filter id='project'></autocomplete-filter>
 
   <input-filter id='task_id' label='Task' style='display:none'></input-filter>
@@ -49,21 +45,22 @@ window['BASE_URL'] ='{{base_url}}';
 </form>
 
 <nav-tabs id='tabs' selected='columns'>
-
-    <tab-item id='columns' value=1 class='active' label='Columns & Milestones'>
-
-      {% for id, chart in dashboard.charts.items() %}
-      {% if chart.library=='vega' and chart.section == 'default' %}
-      <vega-chart data-source='ds-{{id}}' id='vega-chart-{{id}}' title="{{chart.title}}">
+    {% for tabid, tab in layout.tabs.items() %}
+    <tab-item id='{{tabid}}' {%if tabid=='projects'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
+      {% for id, chart in tab.charts.items() %}
+      {% if chart.type=='vega' %}
+      <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' title="{{chart.title}}">
         <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
       </vega-chart>
       {%endif%}
+      {% if chart.html %}
+      <html-chart title='{{chart.title}}'>{{chart.html}}</html-chart>
+      {% endif %}
       {% endfor %}
     </tab-item>
-    <tab-item id='cycle' value=0 label='Lead & Cycle Time'></tab-item>
+    {% endfor %}
+
   </nav-tabs>
 </dashboard-app>
-
-
 
 {% endblock %}
