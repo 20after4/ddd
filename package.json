@@ -16,6 +16,7 @@
     "@trevoreyre/autocomplete-js": "^2.2.0",
     "@types/luxon": "^2.0.7",
     "@typescript/lib-dom": "npm:@types/web",
+    "bootstrap": "^5.1.3",
     "chart.js": "^3.6.0",
     "chartjs-adapter-luxon": "^1.1.0",
     "chartjs-plugin-datalabels": "^2.0.0",
