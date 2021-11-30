@@ -1,0 +1,45 @@
+title: Tasks by Asignee
+db: metrics
+tab: charts
+order: 10
+query: cycletime
+type: vega
+display:
+  height:
+    step: 18
+  width: container
+  transform:
+    - aggregate:
+        - op: distinct
+          field: id
+          as: count
+      groupby:
+        - owner
+  config:
+    legend:
+      disable: true
+  autosize:
+    resize: true
+    type: fit
+  mark:
+    type: bar
+    tooltip: true
+    color: "#66aacc"
+  encoding:
+    size:
+      value: 16
+    y:
+      field: owner
+      type: nominal
+      title: Owner
+      sort: -x
+    color:
+      field: owner
+      type: nominal
+      sort: -x
+      scale:
+        scheme: "tableau20"
+    x:
+      field: count
+      type: quantitative
+      title: Count of tasks

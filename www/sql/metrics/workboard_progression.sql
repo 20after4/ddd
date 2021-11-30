@@ -3,6 +3,7 @@ SELECT
   date(ts, 'unixepoch') AS day,
   date(ts, 'unixepoch', 'start of month') AS month,
   count(task) AS count,
+  group_concat(task) as task,
   c.name AS old,
   n.name AS new,
   c.phid || ':' || n.phid as phids,

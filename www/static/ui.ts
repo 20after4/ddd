@@ -12,6 +12,7 @@ class ModalDialog extends DependableComponent {
             <h5 id="modal-${this.id}-title">${this.props.title}</h5>
           </div>
           <div class="modal-body">
+            ${this.renderBody()}
             ${this.elements}
           </div>
         </div>
@@ -20,9 +21,57 @@ class ModalDialog extends DependableComponent {
     `;
   }
 
+  renderBody() {
+    return [];
+  }
+
   connected() {
-    this.state.modal = new Modal(this);
+    this.state.modal = new Modal(this.querySelector('.modal'));
+  }
+
+  show() {
+    this.state.modal.show();
+  }
+
+  hide() {
+    this.state.modal.hide();
   }
 }
+
 Tonic.add(ModalDialog);
-export {ModalDialog}
+
+class TaskDialog extends ModalDialog {
+  constructor() {
+    super();
+    this.props.title = 'Counted Tasks';
+    this.state.tasks = [];
+    console.log('loaded taskdialog', this);
+  }
+
+  renderBody() {
+    const output = [];
+    for (const task of this.state.tasks) {
+      output.push(this.html`
+        <phab-task id='${task}'>${task}</phab-task>
+      `);
+    }
+    return output;
+  }
+
+  showTasks(tasks) {
+    this.state.tasks = tasks;
+    this.querySelector('.modal-body').innerHTML = this.renderBody().join('');
+    this.show();
+  }
+}
+
+class PhabTask extends Tonic {
+  render() {
+    return this.html`<a href='https://phabricator.wikimedia.org/T${this.id}'>T${this.id}</a>`
+  }
+}
+
+Tonic.add(PhabTask);
+
+Tonic.add(TaskDialog);
+export {ModalDialog, TaskDialog}

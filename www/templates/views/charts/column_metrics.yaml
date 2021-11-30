@@ -1,35 +1,60 @@
 
-title: Tasks per workboard column (monthly total).
+title: Tasks Added & Removed (by workboard column)
 db: metrics
 requires: [ project, -column, -task_id ]
-tab: columns
+tab: hidden
+order: 4
 query: column_metrics_monthly
 type: vega
 display:
-  height: 400
+  height: 300
   autosize:
     type: fit
     contains: padding
   mark:
     type: bar
-    tooltip: true
+    tooltip:
+      content: data
     baseline: bottom
     line: true
   encoding:
     size:
-      value: 15
+      value: 26
+    # facet:
+    #   columns: 3
+    #   field: column_name
+    #   type: ordinal
+    #   title: Column
+    #   spacing: 15
+    #   margin: 5
+    # color:
+    #   field: column_name
+    #   title: Tasks
+    #   type: nominal
     x:
       field: month
       title: Month
-      type: temporal
-      #timeUnit: month
-    color:
+      #type: temporal
+      #timeUnit: monthyear
+    xOffset:
       field: column_name
-      title: Column
-      type: nominal
     y:
       field: total_tasks
       title: Task Count
       type: quantitative
       scale:
         scheme: blueorange
+    tooltip:
+      - field: action
+        type: nominal
+        title: Action
+      - field: total_tasks
+        type: quantitative
+        title: Tasks
+      - field: column_name
+        type: nominal
+        title: Workboard Column
+      - field: month
+        type: temporal
+        title: Month
+        timeUnit: monthyear

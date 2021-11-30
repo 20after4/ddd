@@ -148,7 +148,7 @@ async def init_context(datasette:Datasette, db:Database, request:Request, contex
     context['int'] = int
     context['round'] = round
     tids = ", ".join([str(t) for t in included_tasks.keys()])
-    details = await db.execute(f'select * from Task where id in({tids})')
+    details = await db.execute(f'select t.*, p.name as owner from Task t join phobjects p on t.ownerPHID=p.phid where t.id in({tids})')
     for row in details:
         id = row['id']
         policy = json.loads(row['policy'])

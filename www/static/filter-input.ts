@@ -486,6 +486,14 @@ class DaterangeFilter extends InputFilter {
   render() {
     const id = this.id;
     const dt = DateTime.now();
+    var fs, fe;
+    if (dt.month < 6) {
+      fe = dt.set({month: 6}).endOf('month');
+      fs = fe.minus({years: 1}).set({month:7, day:1});
+    } else {
+      fs = dt.set({month: 7, day: 1, hour: 0});
+      fe = fs.plus({years: 1}).minus({days: 1});
+    }
     const yr = dt.startOf('year');
     const qt = dt.startOf('quarter');
     const pq = qt.minus({months: 3});
@@ -500,6 +508,7 @@ class DaterangeFilter extends InputFilter {
         <li><a class="dropdown-item" href="#date_start=${qt.toISODate()}&date_end=${qt.endOf('quarter').toISODate()}">This Quarter ${qt.toISODate()}</a></li>
         <li><a class="dropdown-item" href="#date_start=${pq.toISODate()}&date_end=${pq.endOf('quarter').toISODate()}">Last Quarter ${pq.toISODate()}</a></li>
         <li><a class="dropdown-item" href="#date_start=${yr.toISODate()}&date_end=${dt.endOf('year').toISODate()}">This Year ${yr.toISODate()}</a></li>
+        <li><a class="dropdown-item" href="#date_start=${fs.toISODate()}&date_end=${fe.toISODate()}">Fiscal Year ${fs.year.toString()}:${fe.year.toString()}</a></li>
       </ul>
       </div>
     <!--<span class="input-group-text">From:</span>-->

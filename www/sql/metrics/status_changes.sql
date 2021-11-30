@@ -1,7 +1,6 @@
 SELECT
   date(ts, 'unixepoch') AS DAY,
   date(ts, 'unixepoch', 'start of month') AS month,
-  task,
   project,
   user,
   event,

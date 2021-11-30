@@ -13,6 +13,7 @@
   "dependencies": {
     "@operatortc/components": "^13.0.0",
     "@operatortc/tonic": "^14.0.0",
+    "@popperjs/core": "^2.10.2",
     "@trevoreyre/autocomplete-js": "^2.2.0",
     "@types/luxon": "^2.0.7",
     "@typescript/lib-dom": "npm:@types/web",

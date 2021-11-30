@@ -1,0 +1,33 @@
+ {
+  "date": {
+    "start": "{{params['date_start']}}",
+    "end": "{{params['date_end']}}"
+  },
+  "cycle_time": { "mean": "{{mean_cycle_time }}",  "median": "{{median_cycle_time}}" },
+  "lead_time": { "mean": "{{mean_lead_time}}", "median": "{{median_lead_time}}" },
+  "columns": [ "id", "url", "points", "owner", "date_created", "date_modified", "start_of_work", "state", "title", "date_ended", "lead", "duration", "duration_proportion_of_mean", "wait_time", "cycle_time", "mean_cycle_time"],
+  "rows": [
+
+{% for task in tasks %}
+{%- set data = task['data']%}{%- if loop.index > 1 %},{% endif %}
+  {
+    "id":"T{{task['id']}}",
+    "url": "https://phabricator.wikimedia.org/T{{task['id']}}",
+    "points": "{{data['points'] or 0}}",
+    "owner": "{{task['data']['owner']}}",
+    "date_created": "{{tsdate(data.get('dateCreated', 0))}}",
+    "date_modified": "{{tsdate(data.get('dateModified', 0))}}",
+    "start_of_work": "{{task['start'].date()}}",
+    {%- if task['state'] %}"state":"{{task['state']}}",{% endif %}
+    "title": "{{task['data']['name']|urlencode}}"
+  {%- if task['end'] %} ,
+    "date_ended": "{{task['end'].date()}}",
+    "lead": {{task['lead']}},
+    "duration": {{task['duration'].days}},
+    "wait_time": {{round(task['lead'] - task['duration'].days, 1)}},
+    "cycle_time": {{task['duration'].days}},
+    "mean_cycle": {{mean_cycle_time}}
+  {% endif %}
+  }{% endfor %}
+  ]
+}

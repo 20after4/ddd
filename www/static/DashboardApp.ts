@@ -6,7 +6,7 @@ import { InputFilter, DaterangeFilter, NavTabs, TabItem, AutocompleteFilter } fr
 import { VegaChart } from './vega-tonic.js'
 import {DependableComponent, Query} from "./dom.js"
 import { DateTime } from "luxon";
-import { ModalDialog} from "./ui.js"
+import { TaskDialog} from "./ui.js"
 
 function initApp() {
   if (window['BASE_URL'])
@@ -22,7 +22,7 @@ function initApp() {
   Tonic.add(DashboardApp);
   initDataSets();
   const app = <DashboardApp> <unknown>document.getElementsByTagName('dashboard-app')[0];
-
+  console.log(TaskDialog);
 
   console.log('---------------- init ----------------')
 }

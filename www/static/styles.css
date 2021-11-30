@@ -45,6 +45,11 @@ form label {
   font-weight: normal !important;
 }
 
+.autocomplete-result-list {
+  z-index: 100 !important;
+  top:40px !important;
+}
+
 .subprojects .autocomplete-result-list {
   background-color: #fff;
 }

@@ -194,10 +194,13 @@ def map(
                 else:
                     res = db.conn.execute('select after_id from conduit_cursor where name=:name', {"name": cursor_id})
                     row = res.fetchone()
-                    after = row[0]
+                    if row and len(row):
+                        after = row[0]
+                    else:
+                        after = 0
             if after:
                 arg['after'] = after
-                console.log('resuming after task id '+str(after))
+                console.log(f'Resuming after task id [bold blue]T{after}[/bold blue]')
             r = phab.request("maniphest.search", arg)
             while len(r.data):
                 task = r.data.popleft()
@@ -205,15 +208,17 @@ def map(
                 task.save()
                 if pages and pages > 1 and len(r.data) < 1:
                     pages -= 1
-                    console.log("Fetching next page", r.cursor)
+                    # console.log("Fetching next page")
                     cursor_after = r.cursor.get("after", None)
                     if cursor_after:
+                        status.update(f'Fetching tasks after [bold blue]T{cursor_after}[/bold blue]. [bold blue]{pages}[/bold blue] pages remaining.')
                         r.next_page()
                         if cursor_id:
                             cursor_after = r.cursor.get("after", None)
                             db.conn.execute(f'REPLACE INTO conduit_cursor values (?,?)', (cursor_id, cursor_after))
+                            # status.update(f"Saved cursor position at [bold blue]{cursor_after}[/bold blue]")
                     else:
-                        console.log("No more pages to fetch")
+                        status.update("Done")
 
         if project_phid:
             console.log(
@@ -228,6 +233,7 @@ def map(
             )
             transactions = r.result
         elif task_ids:
+            status.update('Fetching Transactions')
             console.log(
                 f"Fetching transactions for [bold blue]{len(task_ids)}[/bold blue] tasks."
             )
@@ -322,10 +328,10 @@ def load_data_with_progress(
             cursor = conn.executemany(sql, chunk)
             count += cursor.rowcount
             sts.update(
-                f"Updating [bold green]({count}/{total})[/bold green] {table_name}"
+                f"Updating {table_name} [bold green]({count}/{total})[/bold green]"
             )
         console.log(
-            f"Inserted [bold green]{count}/[/bold green] into {table_name} rows."
+            f"Inserted [bold green]{count}[/bold green] rows into {table_name}."
         )
 
 

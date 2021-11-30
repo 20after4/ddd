@@ -1,13 +1,15 @@
 SELECT
-  MONTH,
+  month,
   column_name,
-  sum(value) AS total_tasks
+  column_phid,
+  sum(value) AS total_tasks,
+  CASE WHEN value > 0 THEN 'added' ELSE 'removed' END as action
 FROM
   (
     SELECT
       printf('T%u', c.task) AS task,
       datetime(c.ts, 'unixepoch') AS ts,
-      date(c.ts, 'unixepoch', 'start of month') AS MONTH,
+      date(c.ts, 'unixepoch', 'start of month') AS month,
       date(
         c.ts,
         'unixepoch',
@@ -17,13 +19,11 @@ FROM
       p.column_name AS column_name,
       p.project_phid AS project_phid,
       p.project_name AS project_name,
-      p.project_name || ':' || p.column_name AS qualified_name,
       p.status AS column_hidden,
       c.value AS value
     FROM
       column_metrics c
       JOIN COLUMNS p ON c.column = p.column_phid
-      AND column_phid = :column
     WHERE
       project_phid = :project
     ORDER BY
@@ -35,5 +35,6 @@ WHERE
   AND ts >= date(:date_start)
   AND ts <= date(:date_end)
 GROUP BY
-  MONTH,
-  column_phid
+  month,
+  column_phid,
+  action

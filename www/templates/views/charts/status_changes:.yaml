@@ -4,7 +4,8 @@ db: metrics
 requires:
   - project
   - -task_id
-tab: columns
+tab: charts
+order: 1
 query: status_changes
 type: vega
 display:
@@ -63,4 +64,7 @@ display:
       field: month
       title: Month (ending date)
       columns: 3
+      spacing: 4
+      margin: 2
       type: temporal
+      timeUnit: monthyear

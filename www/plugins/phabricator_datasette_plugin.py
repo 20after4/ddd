@@ -110,6 +110,8 @@ def extra_template_vars(datasette):
 def render_cell(
     value, column: str, table: Union[str, None], database: str, datasette: Datasette
 ) -> Union[str, None]:
+    if column == 'duration':
+        return str(int(int(value) / (60*60*24)))
     if isinstance(value, int):
         value = str(value)
     if isinstance(value, bytes):
@@ -121,6 +123,7 @@ def render_cell(
         return None
 
     value = value.strip()
+
 
     if ( column in ['tid', 'task'] ):
         if value[0] == 'T' and value[1:].isdigit():

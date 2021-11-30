@@ -10,6 +10,7 @@ declare class VegaChart extends Chart {
     click(e: any): void;
     renderTable(): void;
     renderSource(): void;
+    chartClicked(e: any, arg: any): void;
     datasetChanged(ds: BaseDataSet): void;
     disconnected(): void;
     connected(): void;

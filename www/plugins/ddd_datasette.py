@@ -64,6 +64,12 @@ async def ddd_view(datasette:Datasette, request, scope, send, receive):
 
     _models = {}
     page:str = request.url_vars["page"]
+    response_format = 'html'
+
+    if page.endswith('.json'):
+        page = page[:-5]
+        response_format = 'json'
+
     views_path = Path(__file__).parent.parent / "templates" / "views"
     if page not in _models:
         model_page = page + '.py'
@@ -86,6 +92,7 @@ async def ddd_view(datasette:Datasette, request, scope, send, receive):
 
     db = datasette.get_database('metrics')
     context = {
+        "response_format": response_format,
         "base_url": datasette.urls.path('/'),
         "views_path": views_path,
         "console": console,
@@ -101,7 +108,7 @@ async def ddd_view(datasette:Datasette, request, scope, send, receive):
     if ('template_name' in context):
         template_name = context['template_name']
     else:
-        template_name = f"views/{page}.html"
+        template_name = f"views/{page}.{response_format}"
     console.log('template name: ',template_name)
     try:
         output = await datasette.render_template(template_name, context, request, page)
@@ -121,7 +128,7 @@ def register_routes():
         return prefix + "/".join(parts) + "/?$"
     def v(name):
         """Compose regex fragment that captures one path level as a named variable"""
-        return f"(?P<{name}>[a-zA-Z0-9\\-]+)"
+        return f"(?P<{name}>[a-zA-Z0-9\\-_]+(\\.json)?)"
     def optional(part):
         """Mark a path segment as optional by wrapping it with ()?"""
         return f"?({part})?"

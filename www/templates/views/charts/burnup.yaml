@@ -1,7 +1,8 @@
 title: Burnup
 db: metrics
 requires: [ project, -task_id ]
-tab: columns
+tab: charts
+order: 3
 query: burnup
 type: vega
 display:
@@ -35,6 +36,9 @@ display:
     color:
       field: state_name
       title: Milestone
+      sort:
+        op: max
+        field: value
       type: nominal
       scale:
-        scheme: category20c
+        scheme: tableau20

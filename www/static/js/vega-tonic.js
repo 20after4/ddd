@@ -17,20 +17,25 @@ class VegaChart extends Chart {
             $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
             width: 'container',
             height: 'container',
-            padding: 50,
+            padding: 15,
             autosize: {
-                type: "fit",
+                type: "pad",
                 contains: "padding",
                 resize: true
             },
             view: { stroke: null },
             config: {
+                continuousHeight: 400,
+                discreteHeight: 400,
                 background: '#00000000',
                 arc: {
                     innerRadius: 50
                 },
                 line: {
                     point: true
+                },
+                scale: {
+                    scheme: "category20"
                 }
             }
         };
@@ -158,21 +163,21 @@ class VegaChart extends Chart {
                 return;
             const classes = label.classList;
             if (classes.contains('view-stack')) {
-                this.className = 'view-stack';
+                this.className = 'chart view-stack';
             }
             else if (classes.contains('view-grid')) {
-                this.className = 'view-grid';
+                this.className = 'chart view-grid';
             }
             else if (classes.contains('view-table')) {
                 this.renderTable();
-                this.className = 'view-table';
+                this.className = 'chart view-table';
             }
             else if (classes.contains('view-source')) {
                 this.renderSource();
-                this.className = 'view-source';
+                this.className = 'chart view-source';
             }
             else {
-                this.className = 'view-normal';
+                this.className = 'chart view-normal';
             }
             window.dispatchEvent(new Event('resize'));
         }
@@ -219,6 +224,14 @@ class VegaChart extends Chart {
             const updatedJson = jsoneditor.get();
         }
     }
+    chartClicked(e, arg) {
+        console.log(e, e.item);
+        const datum = arg['datum'];
+        const dialog = document.getElementById('task-modal');
+        console.log(datum);
+        const tasks = datum.task.split(',');
+        dialog.showTasks(tasks);
+    }
     datasetChanged(ds) {
         if (this.state.view) {
             const view = this.state.view;
@@ -239,6 +252,9 @@ class VegaChart extends Chart {
     disconnected() {
     }
     connected() {
+        if (this.props['order']) {
+            this.style = 'order:' + this.props['order'];
+        }
         //this.loadcharts();
     }
     updated(props) {
@@ -274,9 +290,12 @@ class VegaChart extends Chart {
                 },
                 ...this.state.display
             };
+            var self = this;
+            const chartClicked = (e, arg) => this.chartClicked(e, arg);
             vegaEmbed(this.ele('.vega-embed'), spec, { renderer: "svg", actions: false, ...this.props.options }).then((result) => {
                 this.state.vega = result;
                 this.state.view = result.view;
+                result.view.addEventListener('click', chartClicked);
                 if (result.view) {
                     this.classList.remove('hidden');
                     if (DependableComponent.debug_logging) {

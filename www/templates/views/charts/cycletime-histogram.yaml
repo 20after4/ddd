@@ -1,0 +1,26 @@
+title: Cycle Time Histogram
+db: metrics
+tab: hidden
+order: 3
+query: cycletime
+type: vega
+display:
+  height: 300
+  width: container
+  autosize:
+    resize: true
+    type: fit
+  mark:
+    type: bar
+    tooltip: true
+
+  encoding:
+    x:
+      field: duration
+      type: ordinal
+      bin:
+        maxbins: 30
+      title: Cycle time in days (binned)
+    y:
+      aggregate: count
+      title: Count of tasks

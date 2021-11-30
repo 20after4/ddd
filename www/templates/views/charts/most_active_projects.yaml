@@ -1,11 +1,13 @@
 title: Busiest projects (by number of tagged tasks)
 db: metrics
-tab: projects
+tab: charts
+order: 10
 requires: [ -project, -task_id]
 query: most_active_projects
 type: vega
 display:
-  height: 420
+  height:
+    step: 18
   autosize:
     type: fit
     contains: padding
@@ -18,7 +20,7 @@ display:
     line: true
   encoding:
     size:
-      value: 10
+      value: 16
     y:
       field: project_name
       type: nominal
@@ -28,7 +30,7 @@ display:
       type: nominal
       sort: -x
       scale:
-        scheme: "tableau20"
+        scheme: tableau20
     x:
       field: tasks
       type: quantitative

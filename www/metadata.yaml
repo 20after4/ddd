@@ -9,9 +9,8 @@ plugins:
       title: Project Metrics
       description: ""
       tabs:
-        projects: Phabricator Projects
-        columns: Columns & Milestones
-        cycle: "Lead & Cycle Time"
+        charts: Charts
+        cycle: Report
       placeholder_text:
         To get started, please enter a project name or task ID at the top of the page.
       filters:
@@ -35,7 +34,7 @@ plugins:
         task-details:
           title: Task details
           db: metrics
-          tab: task
+          tab: charts
           requires: task_id
           query: task_details
           library: jinja
@@ -43,7 +42,7 @@ plugins:
         task-projects:
           title: Task projects
           db: metrics
-          tab: task
+          tab: charts
           requires: task_id
           query: task_projects
           library: jinja
@@ -51,7 +50,7 @@ plugins:
         task-users:
           title: Task users
           db: metrics
-          tab: task
+          tab: charts
           requires: task_id
           query: task_users
           library: jinja
@@ -63,11 +62,11 @@ plugins:
           library: jinja
           template: task_days_in_project.html
           requires: [ task_id, project ]
-          tab: task
+          tab: charts
         task-days-in-columns:
           title: Days in project columns
           db: metrics
-          tab: task
+          tab: charts
           requires: [ task_id, project ]
           query: select *, next_ts - ts as duration, printf('%.0f', ((next_ts - ts) / 86400.0)) AS duration_days from (select events.*, columns.column_name, columns.project_name, columns.is_default, ifnull(LEAD(ts) OVER(ORDER BY ts), strftime('%s','now', 'localtime')) next_ts from events join columns on new = column_phid where new like '%PHID-PCOL-%' and task = :task_id and event = 'columns' and project_phid = :project order by ts);
           library: vega
@@ -78,24 +77,59 @@ plugins:
               y: { field: column_name, type: nominal, title: 'Column'  }
 
 
-
-
-
-
-
-
 databases:
   metrics:
     tables:
+      conduit_cursor:
+        description_html: |-
+          Each row in the cursors table is used to keep track of the last ID encountered when paging through conduit API responses.
+          When fetching the next page of results, we pass this ID as the 'after' argument to tell phabricator where the next page will begin.
+          Pagination enables us to transfer large amounts of data without overloading the server or exceeding request time limits.
       phobjects:
         label_column: "name"
+        description_html: |-
+          The name, url and basic metadata of every known phabricator object. Used mostly to look up the names of users, projects and columns efficiently. Especially convenient because you can join on the phid field even when you have multiple different PHID types to resolve.
       Project:
         label_column: "name"
+        description_html: |-
+          Bulk phabricator project data.
       ProjectColumn:
         label_column: "name"
       Task:
         label_column: "name"
+        description_html: |-
+          The bulk phabricator task metadata as extracted from th maniphest.search api
+      Columns:
+        description_html: |-
+          Every column from every workboard, including archived projects and hidden columns.
+      column_metrics:
+        description_html: |-
+          This table organizes phabricator task data by the projects and workboard columns.
+          This is sometimes more useful when building a project-centric or milestone-centric
+          view of phabricator activity.
+        columns:
+          ts: unix epoch timestamp when the activity occurred.
+          project: This is either a project PHID, or one of 'global', empty for the events which do not belong to a project context.
+          column: either a column PHID or empty when the event is unrelated to a column or workboard.
+          task: the task id
+          type: the type of activity, for example, 'assign', 'mention-this', 'status'
+          value: eitehr +1 or -1, representing whether the given status was added or removed from the task
 
+      task_metrics:
+        description_html: |-
+          This table represents every state change that was
+          recorded on each phabricator task in the index. The data is organized by
+          "metric" and "state" where metric is the category and state is the value.
+          There are begining and ending timestamps, as well as a duration for each state.
+        units:
+          duration: day
+        columns:
+          task: Phabricator task that this metric applies to.
+          metric: The type or category of the state transition represented.
+          state: The specific value of the metric during this time period.
+          ts: The unix epoch timestamp when this state begins.
+          ts2: The unix epoch timestamp when this state ends.
+          duration: The number of days elapsed between ts and ts2.
     queries:
       column_events:
         title: Column movement events.

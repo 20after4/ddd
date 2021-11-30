@@ -2,7 +2,7 @@
 title: Average time tasks remain, per column
 db: metrics
 requires: [ project, -task_id ]
-tab: columns
+tab: charts
 query: time_in_columns
 type: vega
 display:

@@ -1,7 +1,8 @@
 title: Workboard Progression
 db: metrics
 requires: [ project, -task_id ]
-tab: columns
+tab: charts
+order: 2
 query: workboard_progression
 type: vega
 display:
@@ -26,7 +27,7 @@ display:
           orient: right
       color:
         field: old_new
-        title: old -> new
+        title: Column old->new
         type: nominal
         legend:
           direction: horizontal
@@ -57,7 +58,9 @@ display:
         value: null
       facet:
         field: month
-        title: Month (ending date)
+        title: Month, Year
         type: temporal
         columns: 3
-        margin: 5
+        spacing: 4
+        margin: 2
+        timeUnit: monthyear

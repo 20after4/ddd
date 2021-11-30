@@ -58,6 +58,8 @@ class DashboardLayout(object):
 
         for chartid, chart in self.config['charts'].items():
             tabid = chart.get('tab', 'default')
+            if tabid == 'hidden':
+                continue
             tab = self.tab(tabid)
             tab.charts[chartid] = chart
 

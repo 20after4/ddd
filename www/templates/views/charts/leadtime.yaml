@@ -1,0 +1,48 @@
+title: Lead & Cycle Time Histogram
+db: metrics
+tab: charts
+order: 4
+query: cycletime
+type: vega
+display:
+  width: 400
+  height: 300
+  hconcat:
+    - mark:
+        type: bar
+        tooltip: true
+      encoding:
+        x:
+          field: lead
+          type: ordinal
+          bin:
+            maxbins: 20
+          title: Lead time (days, binned)
+        y:
+          aggregate: count
+          title: Count of tasks
+        color:
+          field: lead
+          type: ordinal
+          scale:
+            scheme: redgrey
+          sort: -x
+          legend: null
+    - mark:
+        type: bar
+        tooltip: true
+      encoding:
+        x:
+          field: duration
+          type: ordinal
+          bin:
+            maxbins: 20
+          title: Cycle time (days, binned)
+        y:
+          aggregate: count
+          title: Count of tasks
+        color:
+          field: duration
+          scale:
+            scheme: browns
+          legend: null

@@ -1,0 +1,65 @@
+title: Cycle Time
+db: metrics
+tab: hidden
+order: 3
+query: cycletime
+type: vega
+display:
+  #height:
+  #  step: 25
+  height: 400
+
+  autosize:
+    resize: true
+    type: fit
+  transform:
+    - fold: [ 'wait_time', 'cycle_time']
+  mark:
+    type: bar
+    tooltip: true
+  encoding:
+    y:
+      field: id
+      title: Task
+      type: ordinal
+      sort: -x
+    x:
+      field: value
+      type: quantitative
+      title: Task Duration (days)
+      sort: wait_time
+    href:
+      field: url
+    color:
+      field: key
+    tooltip:
+      - field: id
+        title: Task ID
+      - field: url
+        title: Phabricator URL
+      - field: title
+        type: nominal
+        title: Task Title
+      - field: owner
+        title: Assigned to
+      - field: cycle_time
+        title: Cycle time (days)
+      - field: wait_time
+        title: Wait Time (days)
+      - field: start_of_work
+        title: Date work started
+      - field: date_created
+        title: Date created
+    # - mark:
+    #     type: bar
+    #     tooltip: true
+    #   encoding:
+    #     x:
+    #       field: duration
+    #       type: ordinal
+    #       bin:
+    #         maxbins: 30
+    #       title: Cycle time in days (binned)
+    #     y:
+    #       aggregate: count
+    #       title: Count of tasks

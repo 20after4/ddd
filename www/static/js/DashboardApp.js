@@ -6,6 +6,7 @@ import { InputFilter, DaterangeFilter, AutocompleteFilter } from './filter-input
 import { VegaChart } from './vega-tonic.js';
 import { DependableComponent, Query } from "./dom.js";
 import { DateTime } from "luxon";
+import { TaskDialog } from "./ui.js";
 function initApp() {
     if (window['BASE_URL'])
         DependableComponent._base_url = window['BASE_URL'];
@@ -19,6 +20,7 @@ function initApp() {
     Tonic.add(DashboardApp);
     initDataSets();
     const app = document.getElementsByTagName('dashboard-app')[0];
+    console.log(TaskDialog);
     console.log('---------------- init ----------------');
 }
 class DashboardApp extends DependableComponent {

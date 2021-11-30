@@ -4,7 +4,8 @@ SELECT
   ph.phid AS state_phid,
   w.date AS week,
   max(date(m.ts, 'unixepoch')) AS ts,
-  max(date(m.ts2, 'unixepoch')) AS ts2
+  max(date(m.ts2, 'unixepoch')) AS ts2,
+  group_concat(task) as task
 FROM
   task_metrics m
   JOIN enabled_columns_and_milestones ph ON (m.state = ph.phid)

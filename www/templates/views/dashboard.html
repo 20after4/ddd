@@ -1,6 +1,6 @@
 
 {% extends "view.html" %}
-
+{% block title %}Data³ - Phabricator Metrics{%endblock%}
 {% block extra_head %}
 <!--<script type='module' src='{{base_url}}static/DashboardApp.js'></script>-->
 <script>
@@ -18,6 +18,8 @@ window['BASE_URL'] ='{{base_url}}';
   <static-data-set id='ds-project_tree'
   url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400">
   </static-data-set>
+  <data-set db='metrics', id='ds-cycletime' params='project,date_start,date_end' url="{{base_url}}-/ddd/cycletime.json?">
+  </data-set>
 {% for id,query in queries.items() %}
 <data-set db='metrics' id='ds-{{id}}' params='{{query.params|join(",") }}' url='{{base_url}}metrics/{{id}}.json?_shape=objects'>{{query.sql}}</data-set>
 {% endfor %}
@@ -46,10 +48,10 @@ window['BASE_URL'] ='{{base_url}}';
 
 <nav-tabs id='tabs' selected='columns'>
     {% for tabid, tab in layout.tabs.items() %}
-    <tab-item id='{{tabid}}' {%if tabid=='projects'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
+    <tab-item id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
       {% for id, chart in tab.charts.items() %}
       {% if chart.type=='vega' %}
-      <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' title="{{chart.title}}">
+      <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' title="{{chart.title}}"{%if chart.order%} order="{{chart.order}}"{%endif%}>
         <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
       </vega-chart>
       {%endif%}
@@ -62,5 +64,5 @@ window['BASE_URL'] ='{{base_url}}';
 
   </nav-tabs>
 </dashboard-app>
-<modal-dialog>Test...</modal-dialog>
+<task-dialog id='task-modal'></task-dialog>
 {% endblock %}
