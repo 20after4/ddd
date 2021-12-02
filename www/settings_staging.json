@@ -5,8 +5,8 @@
     "default_cache_ttl": 3600,
     "cache_size_kb": 102400,
     "hash_urls": false,
-    "base_url": "/staging/",
+    "base_url": "/dev/",
     "force_https_urls": true,
-    "trace_debug": true,
+    "trace_debug": false,
     "template_debug": true
 }

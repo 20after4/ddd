@@ -61,4 +61,11 @@ deploy-testing:
   environment: data.releng.team
   script:
     - cp -af . /home/gitlab-runner/deploy
+    - cd /home/gitlab-runner/deploy
+    - mv venv venv.old
+    - virtualenv --python=python3 venv
+    - source venv/bin/activate
+    - pip3 install poetry pytest
+    - poetry install
+    - cp www/settings_staging.json www/settings.json
     - touch /home/gitlab-runner/deploy/
