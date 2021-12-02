@@ -8,7 +8,7 @@
   "scripts": {
     "prepare": "grunt svgstore",
     "prebuild": "tsc",
-    "build": "esbuild www/static/DashboardApp.js --bundle --outfile=www/static/app.js --target=es2020 --format=iife --platform=browser --keep-names"
+    "build": "esbuild ./www/static/DashboardApp.js --bundle --outfile=./www/static/app.js --target=es2020 --format=iife --platform=browser --keep-names"
   },
   "dependencies": {
     "@operatortc/components": "^13.0.0",

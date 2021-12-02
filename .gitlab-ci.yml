@@ -35,19 +35,19 @@ venv:
     - pip3 install poetry pytest
     - poetry build
 
-tsc:
+npm:
   image: docker-registry.wikimedia.org/releng/npm6:0.1.1
   stage: build
   script:
-    - npx tsc
-
-grunt:
-  image: docker-registry.wikimedia.org/releng/npm6:0.1.1
-  stage: build
-  script:
+#     From https://stackoverflow.com/q/61625191/1672995
+    - export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" --no-use #load nvm
+    - eval "[ -f .nvmrc ] && nvm install || nvm install 14" #install node
+    - node --version
+    - npm --version
     - npm install
     - npm run build
     - npx grunt
+    - npx tsc
 
 pytest:
   stage: test    # It only starts when the job in the build stage completes successfully.
