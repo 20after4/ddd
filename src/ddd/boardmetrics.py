@@ -45,11 +45,6 @@ def cache_tasks(conduit:Conduit, cache:DataCache, tasks:Iterable, sts):
     new_instances = []
     for task in r.data:
         task.save()
-        # instance = PHObject.instance(phid=PHID(key), data=vals, save=True)
-        # new_instances.append(instance)
-
-    # cache.store_all(r.data)
-
 
 def cache_projects(conduit: Conduit, cache, sts, project):
 

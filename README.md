@@ -7,26 +7,30 @@ The first applications for the Data³ tools are focused on exploring software de
 The core of the toolkit consists of the following:
 
 * Datasette.io provides a front-end for browsing and querying one or more SQLite databases.
-* A customized version of datasette-dashboards is included for visualizing the output of queries in Vega/Vega-Lite charts and it can render jinja templates for custom reports or interactive displays.
+* A simple dashboard web app that uses the datasette json api to query sqlite and renders the resulting data as charts (rendered with vega-lite) or html templates for custom reports or interactive displays.
 * A comprehensive python library and command line interface for querying and processing Phabricator task data exported via conduit api requests.
 * Several custom dashboards for datasette which provide visualization of metrics related to Phabricator tasks and workflows.
 * A custom dashboard to explore data and statistics about production MediaWiki deployments.
 
+## Demo / Development Instance
+
+There is a development & testing instance of Datasette and the Data³ Dashboard at [https://data.releng.team/dev/](https://data.releng.team/dev/)
+
 ## Status
 
-This tool an supporting libraries are in early stages of experimentation and
-development. The APIs are not yet stable and the featureset is not yet decided
-let alone completely implemented. Stay tuned or get involved.
+This tool and supporting libraries are currently experimental. The dashboard and initial data model have reached the stage of [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product). The future development direction is currently uncertain but this is a solid foundation to build on.
+
+ This project has a wiki page on MediaWiki.org: [Data³/Metrics-Dashboard](https://www.mediawiki.org/wiki/Data%C2%B3/Metrics-Dashboard )
 
 ## Currently supported data sources:
 
  * Phabricator's conduit API.
 
-## Coming soon:
+## Future Possibilities:
 
  * Elastic ELK
  * Wikimedia SAL
- * Gerrit's rest API
+ * GitLab APIs
 
 # Usage
 
@@ -104,7 +108,7 @@ For deployment on a server, there are sample systemd units in `etc/systemd/*` in
 restart datasette when the data changes. Approximately the same behavior is achieved by the --reload argument to the
 datasette command given here and that is adequate for development and testing locally.
 
-### Datasette Plugins 
+### Datasette Plugins
 
 Datasette has been extended with some plugins to add custom functionality.
 

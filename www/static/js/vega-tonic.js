@@ -144,7 +144,7 @@ class VegaChart extends Chart {
     }
     render(props) {
         return this.html `
-    <div class='chart-title'>${this.props.title}</div>
+    <div class='chart-title'>${this.props.charttitle}</div>
     ${this.html `<button-group class='view-switcher' id='${this.id}-view-switcher'></button-group>`}
     ${this.elements}
     <div class='vega-embed'>

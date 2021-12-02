@@ -36,8 +36,7 @@ window['BASE_URL'] ='{{base_url}}';
   <input-filter id='task_id' label='Task' style='display:none'></input-filter>
   <input-filter id='column' label='Column' style='display:none'></input-filter>
 
-  <daterange-filter id='date'>
-  </daterange-filter>
+  <daterange-filter id='date'></daterange-filter>
 
   <div id="filter-group-buttons" class="col-sm-1 align-self-center align-items-center col-auto">
     <input type="submit" value="Update" class="button">
@@ -51,17 +50,16 @@ window['BASE_URL'] ='{{base_url}}';
     <tab-item id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
       {% for id, chart in tab.charts.items() %}
       {% if chart.type=='vega' %}
-      <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' title="{{chart.title}}"{%if chart.order%} order="{{chart.order}}"{%endif%}>
+      <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' charttitle="{{chart.title}}"{%if chart.order%} order="{{chart.order}}"{%endif%}>
         <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
       </vega-chart>
-      {%endif%}
+      {% endif %}
       {% if chart.html %}
-      <html-chart title='{{chart.title}}'>{{chart.html}}</html-chart>
+      <html-chart charttitle='{{chart.title}}'>{{chart.html}}</html-chart>
       {% endif %}
       {% endfor %}
     </tab-item>
     {% endfor %}
-
   </nav-tabs>
 </dashboard-app>
 <task-dialog id='task-modal'></task-dialog>

@@ -10,7 +10,7 @@ import ddd
 from ddd.phab import Conduit
 
 
-from ddd.phobjects import DataCache, PHIDType, isPHID, PHID, register_sqlite_adaptors, PHObject
+from ddd.phobjects import DataCache, PHIDType, Project, ProjectColumn, Task, isPHID, PHID, register_sqlite_adaptors, PHObject
 from datasette.hookspecs import hookimpl
 from datasette.app import Datasette
 from datasette.database import Database, QueryInterrupted
@@ -124,7 +124,6 @@ def render_cell(
 
     value = value.strip()
 
-
     if ( column in ['tid', 'task'] ):
         if value[0] == 'T' and value[1:].isdigit():
             value = value[1:]
@@ -135,13 +134,15 @@ def render_cell(
                 target='_blank'
             )
 
+    base_url = datasette.urls.path('/')
+
     if value[0:2] == '["' and value[-2:] == '"]':
         if len(value) == 34:
             value = value[2:-2]
         elif len(value) > 34:
             try:
                 data = json.loads(value)
-                data = [A(href=f'/metrics/phobjects/{phid}', label=phid) for phid in data]
+                data = [A(href=f'{base_url}metrics/phobjects/{phid}', label=phid) for phid in data]
                 return Markup(",<br> ".join(data))
             except ValueError:
                 return None
@@ -152,12 +153,17 @@ def render_cell(
         try:
             _ = value.index(',')
             data = [
-                A(href=f'/metrics/phobjects/{phid}', label=phid)
+                A(href=f'{base_url}metrics/phobjects/{phid}', label=phid)
                 for phid in value.split(',')
             ]
             return Markup("<br>\n".join(data))
         except ValueError:
-            return A(href=f'/metrics/phobjects/{value}', label=value)
+            phidtype = PHIDType(value)
+            if phidtype in [Task, Project, ProjectColumn]:
+                table = phidtype.__name__
+            else:
+                table = 'phobjects'
+            return A(href=f'{base_url}metrics/{table}/{value}', label=value)
 
     return None
 
