@@ -1,0 +1,11 @@
+#!/bin/bash
+# this should run after deployment,  in the staging environment
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+
+nvm use 14
+npx tsc
+npx esbuild ./www/static/DashboardApp.js --bundle --outfile=www/static/app.js --target=es2020 --format=iife --platform=browser --keep-names
+cp ./www/settings_staging.json ./www/settings.json
+

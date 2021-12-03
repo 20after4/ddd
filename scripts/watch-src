@@ -1,5 +1,5 @@
 #!/bin/bash
-#nvm use 14
+nvm use 14
 npx tsc --watch &
 sleep 2
 

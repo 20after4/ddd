@@ -80,13 +80,13 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
     """
     config = ctx.meta["config"]  # type: Config
     PHObject.db = config.db
-    config.console.log("Fetching workboard column details from phabricator.")
+    console.log("Fetching workboard column details from phabricator.")
     if project == "all":
         r = config.phab.project_columns()
     else:
         r = config.phab.project_columns(project=PHID(project))
     count = 0
-    with config.console.status("[bold green]Fetching more pages...") as sts:
+    with console.status("[bold green]Fetching more pages...") as sts:
         r.fetch_all(sts)
 
     proxy_phids = []
@@ -108,7 +108,7 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
                     f"Saved [bold green]{count}[/bold green] ([bold blue]{pct}%[/bold blue]) Project Columns."
                 )
 
-    config.console.log(f"Fetched & cached {count} Project Columns.")
+    console.log(f"Fetched & cached {count} Project Columns.")
     config.db.conn.commit()
     config.console.log("Updating phobjects cache.")
     _, cache = init_caches(config.db, config.phab)
@@ -121,7 +121,7 @@ def cache_columns(ctx: typer.Context, project: str = Option("all")):
     optimize(config)
 
 def optimize(config):
-    with config.console.status("[bold green]Running optimize") as sts:
+    with console.status("[bold green]Running optimize") as sts:
         config.db.conn.executescript('PRAGMA analysis_limit=1000;PRAGMA optimize;')
 
 @cli.command()
