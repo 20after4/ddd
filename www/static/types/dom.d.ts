@@ -52,7 +52,7 @@ declare class DependableComponent extends Tonic {
     debug(...args: any[]): void;
     error(...args: any[]): void;
     log(...args: any[]): void;
-    constructor();
+    constructor(data?: any);
     get base_url(): any;
     waitfor(id: any): Promise<any>;
     connected(): void;

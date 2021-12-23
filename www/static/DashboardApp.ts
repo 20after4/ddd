@@ -22,9 +22,7 @@ function initApp() {
   Tonic.add(DashboardApp);
   initDataSets();
   const app = <DashboardApp> <unknown>document.getElementsByTagName('dashboard-app')[0];
-  console.log(TaskDialog);
-
-  console.log('---------------- init ----------------')
+  //console.log('---------------- init ----------------')
 }
 
 
@@ -36,8 +34,6 @@ class DashboardApp extends DependableComponent {
   constructor() {
     super();
     this.query = Query.init();
-
-
     this.addEventListener('change', this.change);
 
     const form = this.querySelector('form');
@@ -54,7 +50,6 @@ class DashboardApp extends DependableComponent {
     this.setState(this.query);
 
     const loaded = (event?) => {
-        console.log("Content loaded");
         for (const chart of document.querySelectorAll('vega-chart')) {
           (chart as unknown as VegaChart).loadcharts();
         }
@@ -82,7 +77,7 @@ class DashboardApp extends DependableComponent {
     }
 
     this.query.set(e.target.id, e.target.value)
-    console.log('changed', e.target.id, e.target.value);
+    this.debug('changed', e.target.id, e.target.value);
     this.update_state_listeners();
   }
 
@@ -98,16 +93,14 @@ class DashboardApp extends DependableComponent {
   }
 
   setState(state=null) {
-    console.log('setState');
     //this.update_state_listeners();
     for (const ele of this.querySelectorAll('.filter') as any as InputFilter[]) {
-      console.log('setState',ele,this.query);
+      this.debug('setState',ele,this.query);
       ele.setState(this.query);
     }
   }
 
   submit(e?){
-    //const e = arguments[0];
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -141,7 +134,7 @@ class DashboardApp extends DependableComponent {
   }
 
   async loadContent(url:URL) {
-    console.log('loadContent', url);
+    this.debug('loadContent', url);
 
     // for (const ele of  document.querySelectorAll('data-set')) {
     //   const ds = ele as unknown as DataSet;
@@ -150,7 +143,7 @@ class DashboardApp extends DependableComponent {
 
     var reportUrl = new URL(url);
     reportUrl.pathname = url.pathname.replace('dashboard/project-metric', 'cycletime/')
-    console.log('reportUrl', reportUrl.href);
+    this.debug('reportUrl', reportUrl.href);
     const response = await fetch(reportUrl.href);
     if (response.status === 200) {
       const tmpl = document.createElement('template');

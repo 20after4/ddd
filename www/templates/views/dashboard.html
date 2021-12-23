@@ -18,6 +18,9 @@ window['BASE_URL'] ='{{base_url}}';
   <static-data-set id='ds-project_tree'
   url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400">
   </static-data-set>
+  <static-data-set id='ds-tasks'
+  url="{{base_url}}metrics.json?_shape=objects" sql="select id,name,status,dateCreated,dateModified,subtype,points,priority,ownerPHID,closerPHID,dateClosed from Task where id in (?*)">
+  </static-data-set>
   <data-set db='metrics', id='ds-cycletime' params='project,date_start,date_end' url="{{base_url}}-/ddd/cycletime.json?">
   </data-set>
 {% for id,query in queries.items() %}
@@ -47,7 +50,7 @@ window['BASE_URL'] ='{{base_url}}';
 
 <nav-tabs id='tabs' selected='columns'>
     {% for tabid, tab in layout.tabs.items() %}
-    <tab-item id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
+    <tab-item role='tabpanel' id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
       {% for id, chart in tab.charts.items() %}
       {% if chart.type=='vega' %}
       <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' charttitle="{{chart.title}}"{%if chart.order%} order="{{chart.order}}"{%endif%}>

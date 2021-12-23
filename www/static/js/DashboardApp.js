@@ -6,7 +6,6 @@ import { InputFilter, DaterangeFilter, AutocompleteFilter } from './filter-input
 import { VegaChart } from './vega-tonic.js';
 import { DependableComponent, Query } from "./dom.js";
 import { DateTime } from "luxon";
-import { TaskDialog } from "./ui.js";
 function initApp() {
     if (window['BASE_URL'])
         DependableComponent._base_url = window['BASE_URL'];
@@ -20,8 +19,7 @@ function initApp() {
     Tonic.add(DashboardApp);
     initDataSets();
     const app = document.getElementsByTagName('dashboard-app')[0];
-    console.log(TaskDialog);
-    console.log('---------------- init ----------------');
+    //console.log('---------------- init ----------------')
 }
 class DashboardApp extends DependableComponent {
     constructor() {
@@ -41,7 +39,6 @@ class DashboardApp extends DependableComponent {
         window.addEventListener('popstate', this.popstateListener);
         this.setState(this.query);
         const loaded = (event) => {
-            console.log("Content loaded");
             for (const chart of document.querySelectorAll('vega-chart')) {
                 chart.loadcharts();
             }
@@ -67,7 +64,7 @@ class DashboardApp extends DependableComponent {
             return;
         }
         this.query.set(e.target.id, e.target.value);
-        console.log('changed', e.target.id, e.target.value);
+        this.debug('changed', e.target.id, e.target.value);
         this.update_state_listeners();
     }
     popstate(e) {
@@ -81,15 +78,13 @@ class DashboardApp extends DependableComponent {
         }
     }
     setState(state = null) {
-        console.log('setState');
         //this.update_state_listeners();
         for (const ele of this.querySelectorAll('.filter')) {
-            console.log('setState', ele, this.query);
+            this.debug('setState', ele, this.query);
             ele.setState(this.query);
         }
     }
     submit(e) {
-        //const e = arguments[0];
         if (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -117,14 +112,14 @@ class DashboardApp extends DependableComponent {
         return false;
     }
     async loadContent(url) {
-        console.log('loadContent', url);
+        this.debug('loadContent', url);
         // for (const ele of  document.querySelectorAll('data-set')) {
         //   const ds = ele as unknown as DataSet;
         //   ds.reRender();
         // }
         var reportUrl = new URL(url);
         reportUrl.pathname = url.pathname.replace('dashboard/project-metric', 'cycletime/');
-        console.log('reportUrl', reportUrl.href);
+        this.debug('reportUrl', reportUrl.href);
         const response = await fetch(reportUrl.href);
         if (response.status === 200) {
             const tmpl = document.createElement('template');

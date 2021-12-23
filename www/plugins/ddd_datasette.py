@@ -192,17 +192,6 @@ def extra_template_vars(template:str, database:str, table:str, columns:str, view
     }
 
 
-# def magic_phid(key, request):
-#     return 'mmodell'
-
-
-# @hookimpl
-# def register_magic_parameters(datasette):
-#     return [
-#         ("phid", magic_phid),
-#     ]
-
-
 @hookimpl
 def canned_queries(datasette: Datasette, database: str) -> Mapping[str, str]:
     # load "canned queries" from the filesystem under

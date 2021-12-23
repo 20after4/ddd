@@ -122,7 +122,7 @@ class BaseDataSet extends DependableComponent {
     this.query = Query.init();
   }
   stateChanged(key, values) {
-    console.log('stateChanged on', this, key, values);
+    this.debug('stateChanged on', this, key, values);
 
     this.state.replacer = param_replacer(this.query);
     this.reRender();
@@ -133,7 +133,7 @@ class BaseDataSet extends DependableComponent {
           (ele as DatasetConsumer).datasetChanged(this);
         }
       } catch(err) {
-        console.error(err, ele);
+        this.error(err, ele);
       }
     }
   }
@@ -173,7 +173,7 @@ class DataSet extends BaseDataSet {
     url.searchParams.set('sql', sql.toString());
 
     const query_params = this.query.state;
-    console.log('query_params', query_params, sql);
+    this.debug('query_params', query_params, sql);
     for (const prop in query_params) {
       var val = query_params[prop];
       if (!val){
@@ -195,6 +195,7 @@ class DataSet extends BaseDataSet {
     }
     return url.href;
   }
+
   async fetch(cache=true){
     const url = this.url;
 
@@ -228,16 +229,108 @@ class DataSet extends BaseDataSet {
 
 
 class StaticDataSet extends DataSet {
-  async fetch() {
 
-    const url = this.props.url;
-    const response = await fetch(url);
+
+  async fetch(ids) {
+
+    const url = new URL(this.props.url, window.location.protocol+'//'+window.location.host);
+    if (this.props.sql) {
+      var sql:string = this.props.sql;
+      if (ids) {
+        var placeholders = [];
+        var i = 0;
+        for (var i = 1; i <= ids.length; i++) {
+          placeholders.push(":id"+i);
+          url.searchParams.set('id'+i, ids[i-1]);
+        }
+        sql = sql.replace('?*', placeholders.join(','));
+      }
+      url.searchParams.set('sql', sql);
+    }
+
+    const response = await fetch(url.href);
     const fetched = await response.json();
-    this.state.data = new DatasetCursor(this, fetched, url);
+    this.state.data = new DatasetCursor(this, fetched, url.href);
     return this.state.data;
   }
   render (p1, p2, p3) {
     return this.html`${this.props.sql}${this.nodes}`;
+  }
+}
+
+interface DataMap {
+  [key: string]:any
+}
+
+function makeTimeoutPromise(data={}, time_ms=1) {
+  return new Promise(async (resolve, reject) => {
+    setTimeout(()=>{
+      resolve(data);
+    }, time_ms)
+  });
+}
+
+/**
+ * AsyncComponentFetcher -
+ * handles loading a bunch of objects from the back end
+ * database by batching individual calls to load() and bundling them together into
+ * one call to the backend where the rows are loaded in a single query of the form:
+ * SELECT * FROM Table WHERE pk IN (id1, id2, ..., idn)
+ *
+ * The async load(id) function blocks up to 10ms to allow a bunch of async calls to collect
+ * the ids that are needed and then load will batch the calls into one fetch, finally the
+ * results of the fetch are unbundled and returned by the individual promises.
+ */
+class AsyncComponentFetcher {
+  ds:StaticDataSet;
+  cls:typeof DependableComponent;
+  data:DataMap;
+  pending:Promise<any>;
+  batching:Promise<any>;
+  pk:string;
+  requestedIds:string[] = [];
+
+  constructor(ds:StaticDataSet, cls:typeof DependableComponent, pk:string) {
+    this.ds = ds;
+    this.cls = cls;
+    this.data = {};
+    this.pk = pk;
+  }
+
+  async load(id){
+    if (this.data[id]) {
+      return this.data[id];
+    }
+
+    if (this.requestedIds.indexOf(id) == -1 ) {
+      this.requestedIds.push(id);
+    }
+    if (!this.batching) {
+      this.batching = makeTimeoutPromise({}, 10);
+      await this.batching;
+      const ids = this.requestedIds;
+      if (ids.length) {
+        this.requestedIds = [];
+        const pending = new Promise(async (resolve, reject) => {
+          const data = await this.ds.fetch(ids);
+          for (const obj of data.rows) {
+            this.data[obj[this.pk]] = new this.cls(obj);
+          }
+          resolve(data);
+          this.pending = null;
+        });
+        this.pending = pending;
+        await pending;
+      }
+      this.batching = null;
+    } else {
+      await this.batching;
+    }
+    if (this.pending) {
+      await this.pending;
+    }
+
+    return this.data[id];
   }
 }
 
@@ -330,8 +423,7 @@ async function fetchData(dataset_id:string, cache=true, wait=true) {
 
   const ds = <DataSet> <unknown>document.getElementById(dataset_id);
   if (!ds) {
-    console.log('dataset not found: ', dataset_id, ds);
-    return;
+    throw new Error(`dataset not found: ${dataset_id}`)
   }
   const promise = ds.fetch();
   if (wait) {
@@ -342,4 +434,4 @@ async function fetchData(dataset_id:string, cache=true, wait=true) {
 
 }
 
-export {DataSource, BaseDataSet, DataSet, StaticDataSet, initDataSets, fetchData}
+export {DataSource, BaseDataSet, DataSet, StaticDataSet, initDataSets, fetchData, AsyncComponentFetcher}

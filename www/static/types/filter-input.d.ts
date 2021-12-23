@@ -55,6 +55,7 @@ declare class NavTabs extends InputFilter {
     get value(): any;
     set selected(tab: any);
     connected(): void;
+    keyup(e: any): void;
     click(e: any): void;
     renderTabs(): any[];
     render(): any;

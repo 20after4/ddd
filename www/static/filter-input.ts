@@ -567,6 +567,31 @@ class NavTabs extends InputFilter {
     }
   }
 
+  keyup(e) {
+    console.log(e);
+    var next;
+    if (e.key == 'ArrowRight') {
+      next = e.target.parentElement.nextElementSibling;
+    } else if (e.key == 'ArrowLeft') {
+      next = e.target.parentElement.previousElementSibling;
+    } else if (e.key == ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      e.target.click();
+    }
+    if (!next) {
+      return;
+    }
+    console.log(next);
+    if (next && next.getAttribute('role') == 'tab') {
+      const anchor = next.querySelector('a');
+      anchor.click();
+      anchor.focus();
+      e.preventDefault();
+      return;
+    }
+  }
+
   click(e){
     if (!e.target.matches('.nav-link')) return;
     e.preventDefault();
@@ -585,23 +610,21 @@ class NavTabs extends InputFilter {
     const tabs = this.tabs.map(tab=>{
       const selected = tab.selected ? 'active':'';
       const label = tab.getAttribute('label');
-      const aria = tab.selected ? 'aria-current="page"' : '';
+      const aria_selected = tab.selected ? "true" : "false";
 
       return this.html`
-      <li class='nav-item' ${aria} panel='${tab.id}'>
-        <a class='nav-link ${selected}' href='#${tab.id}'>${label}</a>
+      <li class='nav-item' role='tab' aria-selected='${aria_selected}' aria-controls='${tab.id}' panel='${tab.id}'>
+        <a class='nav-link ${selected}' tabindex='0' href='#${tab.id}'>${label}</a>
       </li>`;
     });
     return tabs;
   }
   render() {
-    console.log('this.tabs', this.tabs);
     return this.html`
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs" role="tablist">
       ${this.renderTabs()}
-
     </ul>
-    <div class='tab-panels'>
+    <div class="tab-panels">
     ${this.elements}
     </div>
     `;
@@ -617,7 +640,6 @@ class TabItem extends DependableComponent {
     return this.props.value;
   }
   set value(val) {
-    //this.debug.log('value', val, this.props.value, this.selected)
     this.props.value = val;
     this.setAttribute('value', this.props.value);
     if (this.isTrue(val)) {
@@ -638,6 +660,7 @@ class TabItem extends DependableComponent {
   }
   connected() {
     this.value = this.props.value || this.props.selected;
+    this.setAttribute('role', 'tabpanel');
   }
   set selected(val) {
     this.value = val;

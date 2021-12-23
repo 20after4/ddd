@@ -3,11 +3,14 @@ import { DependableComponent } from "./dom.js";
 import { vega } from 'vega-embed';
 import vegaEmbed from 'vega-embed';
 import JSONEditor from './jsoneditor.js';
-import { fetchData } from './datasource.js';
+import { AsyncComponentFetcher, fetchData } from './datasource.js';
+import { PhabTask } from './ui.js';
 class Chart extends DependableComponent {
     constructor() {
         super();
         this.classList.add('chart');
+        var datasource = document.getElementById('ds-tasks');
+        this.fetcher = new AsyncComponentFetcher(datasource, PhabTask, 'id');
     }
 }
 class VegaChart extends Chart {
@@ -224,13 +227,34 @@ class VegaChart extends Chart {
             const updatedJson = jsoneditor.get();
         }
     }
-    chartClicked(e, arg) {
+    async chartClicked(e, arg) {
+        if (!arg) {
+            console.log('chartClicked', e);
+            return;
+        }
         console.log(e, e.item);
         const datum = arg['datum'];
         const dialog = document.getElementById('task-modal');
         console.log(datum);
         const tasks = datum.task.split(',');
-        dialog.showTasks(tasks);
+        var promises = [];
+        var instances = [];
+        for (const id of tasks) {
+            promises.push(this.fetcher.load(id));
+        }
+        instances = await Promise.all(promises);
+        if (datum['event']) {
+            dialog.title = `${tasks.length} Tasks,  ${datum['event']} ${datum['old_new']}`;
+        }
+        else {
+            dialog.title = `${tasks.length} Tasks`;
+        }
+        dialog.showTasks(instances);
+        // var taskdata = datasource.fetch(tasks);
+        // taskdata.then(function(data){
+        //   data.index('id');
+        //   dialog.showTasks(tasks, data);
+        // });
     }
     datasetChanged(ds) {
         if (this.state.view) {

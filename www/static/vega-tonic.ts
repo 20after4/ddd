@@ -3,13 +3,17 @@ import {DependableComponent} from "./dom.js"
 import {vegaLite, vega} from 'vega-embed'
 import vegaEmbed from 'vega-embed'
 import JSONEditor from './jsoneditor.js';
-import {BaseDataSet, fetchData } from './datasource.js'
-import {TaskDialog} from './ui.js';
+import {AsyncComponentFetcher, BaseDataSet, fetchData, StaticDataSet } from './datasource.js'
+import {PhabTask, TaskDialog} from './ui.js';
 
 class Chart extends DependableComponent {
+  fetcher:AsyncComponentFetcher;
+
   constructor() {
     super();
     this.classList.add('chart');
+    var datasource = <StaticDataSet> <any> document.getElementById('ds-tasks');
+    this.fetcher = new AsyncComponentFetcher(datasource, PhabTask, 'id');
   }
 }
 
@@ -208,7 +212,7 @@ class VegaChart extends Chart {
     }
   }
   renderSource() {
-    if (this.state.display){
+    if (this.state.display) {
       const out = `<div class="jsoneditor"><div>`;
       const container = this.querySelector('.source-view');
       container.innerHTML = out;
@@ -227,13 +231,34 @@ class VegaChart extends Chart {
     }
   }
 
-  chartClicked(e, arg) {
+  async chartClicked(e, arg) {
+    if (!arg) {
+      console.log('chartClicked', e);
+      return;
+    }
     console.log(e, e.item);
     const datum = arg['datum'];
     const dialog:TaskDialog = <TaskDialog> <any> document.getElementById('task-modal');
     console.log(datum);
     const tasks = datum.task.split(',');
-    dialog.showTasks(tasks);
+    var  promises = [];
+    var instances = [];
+    for (const id of tasks) {
+      promises.push(this.fetcher.load(id));
+    }
+    instances = await Promise.all(promises);
+    if (datum['event']) {
+      dialog.title = `${tasks.length} Tasks,  ${datum['event']} ${datum['old_new']}`;
+    } else {
+      dialog.title = `${tasks.length} Tasks`;
+    }
+    dialog.showTasks(instances);
+    // var taskdata = datasource.fetch(tasks);
+    // taskdata.then(function(data){
+    //   data.index('id');
+    //   dialog.showTasks(tasks, data);
+    // });
+
   }
 
   datasetChanged(ds:BaseDataSet) {

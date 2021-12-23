@@ -1,6 +1,8 @@
 import { DependableComponent } from "./dom.js";
 declare class ModalDialog extends DependableComponent {
     render(): any;
+    get body(): HTMLElement;
+    set title(title: any);
     renderBody(): any[];
     connected(): void;
     show(): void;
@@ -8,8 +10,13 @@ declare class ModalDialog extends DependableComponent {
 }
 declare class TaskDialog extends ModalDialog {
     constructor();
-    renderBody(): any[];
+    renderBody(): any;
     showTasks(tasks: any): void;
 }
-export { ModalDialog, TaskDialog };
+declare class PhabTask extends DependableComponent {
+    static stylesheet(): string;
+    constructor(id: any);
+    render(): any;
+}
+export { ModalDialog, TaskDialog, PhabTask };
 //# sourceMappingURL=ui.d.ts.map

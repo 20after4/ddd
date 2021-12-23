@@ -47,7 +47,7 @@ class Query {
         const state = this._state;
         for (const key in newState) {
             const val = newState[key];
-            console.log('state[' + key + ']=' + val);
+            //console.log('state['+key+']='+val);
             if (state[key] && state[key] !== val || !state[key]) {
                 this.set(key, val);
             }
@@ -120,9 +120,12 @@ class Query {
     }
 }
 class DependableComponent extends Tonic {
-    constructor() {
+    constructor(data = null) {
         super();
         this.hasResolved = false;
+        if (data) {
+            this.state.data = data;
+        }
     }
     ele(selector) {
         return this.querySelector(selector);
@@ -178,7 +181,7 @@ class DependableComponent extends Tonic {
 }
 DependableComponent._base_url = '/';
 DependableComponent._waitingFor = {};
-DependableComponent.debug_logging = true;
+DependableComponent.debug_logging = false;
 DependableComponent.logging = true;
 export { DependableComponent, Query, waitForID };
 //# sourceMappingURL=dom.js.map

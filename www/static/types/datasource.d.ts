@@ -24,8 +24,33 @@ declare class DataSet extends BaseDataSet {
     render(p1: any, p2: any, p3: any): any;
 }
 declare class StaticDataSet extends DataSet {
-    fetch(): Promise<any>;
+    fetch(ids: any): Promise<any>;
     render(p1: any, p2: any, p3: any): any;
+}
+interface DataMap {
+    [key: string]: any;
+}
+/**
+ * AsyncComponentFetcher -
+ * handles loading a bunch of objects from the back end
+ * database by batching individual calls to load() and bundling them together into
+ * one call to the backend where the rows are loaded in a single query of the form:
+ * SELECT * FROM Table WHERE pk IN (id1, id2, ..., idn)
+ *
+ * The async load(id) function blocks up to 10ms to allow a bunch of async calls to collect
+ * the ids that are needed and then load will batch the calls into one fetch, finally the
+ * results of the fetch are unbundled and returned by the individual promises.
+ */
+declare class AsyncComponentFetcher {
+    ds: StaticDataSet;
+    cls: typeof DependableComponent;
+    data: DataMap;
+    pending: Promise<any>;
+    batching: Promise<any>;
+    pk: string;
+    requestedIds: string[];
+    constructor(ds: StaticDataSet, cls: typeof DependableComponent, pk: string);
+    load(id: any): Promise<any>;
 }
 interface DataResponse {
     rows: any[];
@@ -71,5 +96,5 @@ declare class DatasetCursor {
 }
 declare function initDataSets(): boolean;
 declare function fetchData(dataset_id: string, cache?: boolean, wait?: boolean): Promise<DatasetCursor>;
-export { DataSource, BaseDataSet, DataSet, StaticDataSet, initDataSets, fetchData };
+export { DataSource, BaseDataSet, DataSet, StaticDataSet, initDataSets, fetchData, AsyncComponentFetcher };
 //# sourceMappingURL=datasource.d.ts.map

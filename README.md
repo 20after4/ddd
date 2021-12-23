@@ -41,7 +41,10 @@ setup.py will install a command line tool called `dddcli`
 To install for development use:
 
 ```bash
-python3 setup.py develop
+pip3 install virtualenv poetry
+virtualenv --python=python3 .venv
+source .venv/bin/activate
+poetry install
 ```
 
 ### dddcli
@@ -116,6 +119,10 @@ Datasette has been extended with some plugins to add custom functionality.
 * There is also a customized version of datasette-dashboards which is included via a submodule at
 `src/datacube-dashboards`.  Do the usual `git submodule update --init` to get that source code.
 * There are custom views and routes added in ddd_datasette.py that map urls like /-/ddd/$page/  to files in `www/templates/view/`.
+
+# Dashboards
+
+The data³ Dashboards web application is documented in [./docs/DefiningDashboards.md](docs/DefiningDashboards.md).
 
 # Example code:
 

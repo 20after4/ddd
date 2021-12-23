@@ -1,6 +1,7 @@
 import { DependableComponent } from "./dom.js";
-import { BaseDataSet } from './datasource.js';
+import { AsyncComponentFetcher, BaseDataSet } from './datasource.js';
 declare class Chart extends DependableComponent {
+    fetcher: AsyncComponentFetcher;
     constructor();
 }
 declare class VegaChart extends Chart {
@@ -10,7 +11,7 @@ declare class VegaChart extends Chart {
     click(e: any): void;
     renderTable(): void;
     renderSource(): void;
-    chartClicked(e: any, arg: any): void;
+    chartClicked(e: any, arg: any): Promise<void>;
     datasetChanged(ds: BaseDataSet): void;
     disconnected(): void;
     connected(): void;
