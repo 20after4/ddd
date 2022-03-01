@@ -71,6 +71,53 @@ flowchart TB
     end
 ```
 
+
+### Dashboard Web Components
+
+Best told by example, here is how a dashboard is constructed. This is a simplified version of `www/templates/views/dashboard.html` with the jinja template constructs mostly removed for clarity.
+
+CSS classes are mostly from the bootstrap css framework.
+```html
+<dashboard-app id='dashboard'>
+
+  <data-source id='dashboard-queries'>
+    <!-- a static-data-set is static in the sense that it doesn't depend on the query and is effectively immutable at runtime. Therefore, the data can be cached fairly aggressively. -->
+    <static-data-set id='ds-project_tree' url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400"></static-data-set>
+    <static-data-set id='ds-tasks' url="{{base_url}}metrics.json?_shape=objects" sql="select id,name,status,dateCreated,dateModified,subtype,points,priority,ownerPHID,closerPHID,dateClosed from Task where id in (?*)"></static-data-set>
+    <!-- a data-set, without the static- prefix is dynamic in the sense that it is reactive, the data changes and views update based on changes to the user's query. -->
+    <data-set db='metrics', id='ds-cycletime' params='project,date_start,date_end' url="{{base_url}}-/ddd/cycletime.json?"></data-set>
+  </data-source>
+
+
+  <!-- search / filter UI -->
+  <form id='form_{{id}}'>
+    <div class="container-fluid p-0 dashboard-filters">
+      <autocomplete-filter id='project'></autocomplete-filter>
+      <input-filter id='task_id' label='Task' style='display:none'></input-filter>
+      <input-filter id='column' label='Column' style='display:none'></input-filter>
+      <daterange-filter id='date'></daterange-filter>
+      <div id="filter-group-buttons" class="col-sm-1 align-self-center align-items-center col-auto">
+        <input type="submit" value="Update" class="button">
+      </div>
+    </div>
+  </form>
+
+  <!-- tabs -->
+  <nav-tabs id='tabs' selected='columns'>
+    <!-- one tab-item for each dashboard tab -->
+    <tab-item role='tabpanel' id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
+      <!-- one or more chart elements -->
+      <vega-chart data-source='datasource-id' id='vega-chart-{{id}}' charttitle="title string" order="1">
+        <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
+      </vega-chart>
+    </tab-item>
+  </nav-tabs>
+
+</dashboard-app>
+<task-dialog id='task-modal'></task-dialog>
+
+```
+
 -----
 
 ## Adding new charts to the dashboard:
