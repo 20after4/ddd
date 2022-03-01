@@ -2,7 +2,7 @@
 {% extends "view.html" %}
 {% block title %}Data³ - Phabricator Metrics{%endblock%}
 {% block extra_head %}
-<!--<script type='module' src='{{base_url}}static/DashboardApp.js'></script>-->
+
 <script>
 window['BASE_URL'] ='{{base_url}}';
 </script>
@@ -13,55 +13,40 @@ window['BASE_URL'] ='{{base_url}}';
 
 
 <dashboard-app id='dashboard'>
+  <data-source id='dashboard-queries'>
+    <static-data-set id='ds-project_tree' url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400"></static-data-set>
+    <static-data-set id='ds-tasks' url="{{base_url}}metrics.json?_shape=objects" sql="select id,name,status,dateCreated,dateModified,subtype,points,priority,ownerPHID,closerPHID,dateClosed from Task where id in (?*)"></static-data-set>
+    <data-set db='metrics', id='ds-cycletime' params='project,date_start,date_end' url="{{base_url}}-/ddd/cycletime.json?"></data-set>
+    {% for id,query in queries.items() %}
+      <data-set db='metrics' id='ds-{{id}}' params='{{query.params|join(",") }}' url='{{base_url}}metrics/{{id}}.json?_shape=objects'>{{query.sql}}</data-set>
+    {% endfor %}
+  </data-source>
+  <form id='form_{{id}}'>
+    <div class="container-fluid p-0 dashboard-filters">
+      <autocomplete-filter id='project'></autocomplete-filter>
+      <input-filter id='task_id' label='Task' style='display:none'></input-filter>
+      <input-filter id='column' label='Column' style='display:none'></input-filter>
+      <daterange-filter id='date'></daterange-filter>
+      <div id="filter-group-buttons" class="col-sm-1 align-self-center align-items-center col-auto">
+        <input type="submit" value="Update" class="button">
+      </div>
+    </div>
+  </form>
 
-<data-source id='dashboard-queries'>
-  <static-data-set id='ds-project_tree'
-  url="{{base_url}}metrics/project_tree.json?_shape=objects&_size=max&_ttl=86400">
-  </static-data-set>
-  <static-data-set id='ds-tasks'
-  url="{{base_url}}metrics.json?_shape=objects" sql="select id,name,status,dateCreated,dateModified,subtype,points,priority,ownerPHID,closerPHID,dateClosed from Task where id in (?*)">
-  </static-data-set>
-  <data-set db='metrics', id='ds-cycletime' params='project,date_start,date_end' url="{{base_url}}-/ddd/cycletime.json?">
-  </data-set>
-{% for id,query in queries.items() %}
-<data-set db='metrics' id='ds-{{id}}' params='{{query.params|join(",") }}' url='{{base_url}}metrics/{{id}}.json?_shape=objects'>{{query.sql}}</data-set>
-{% endfor %}
-<!--
-{% for id, chart in dashboard.charts.items() %}
-<data-set requires='{{chart.requires}}' db='{{chart.db}}' id='ds-{{id}}' url='{{base_url}}{{chart.db}}.json?_shape=objects'>{{chart.query}}</data-set>
-{% endfor %}
--->
-</data-source>
-<form id='form_{{id}}'>
-<div class="container-fluid p-0 dashboard-filters">
-  <autocomplete-filter id='project'></autocomplete-filter>
-
-  <input-filter id='task_id' label='Task' style='display:none'></input-filter>
-  <input-filter id='column' label='Column' style='display:none'></input-filter>
-
-  <daterange-filter id='date'></daterange-filter>
-
-  <div id="filter-group-buttons" class="col-sm-1 align-self-center align-items-center col-auto">
-    <input type="submit" value="Update" class="button">
-  </div>
-
-  </div>
-</form>
-
-<nav-tabs id='tabs' selected='columns'>
+  <nav-tabs id='tabs' selected='columns'>
     {% for tabid, tab in layout.tabs.items() %}
-    <tab-item role='tabpanel' id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
-      {% for id, chart in tab.charts.items() %}
-      {% if chart.type=='vega' %}
-      <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' charttitle="{{chart.title}}"{%if chart.order%} order="{{chart.order}}"{%endif%}>
-        <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
-      </vega-chart>
-      {% endif %}
-      {% if chart.html %}
-      <html-chart charttitle='{{chart.title}}'>{{chart.html}}</html-chart>
-      {% endif %}
-      {% endfor %}
-    </tab-item>
+      <tab-item role='tabpanel' id='{{tabid}}' {%if tabid=='charts'%}value=1 class='active'{%endif%} label='{{tab.label}}'>
+        {% for id, chart in tab.charts.items() %}
+          {% if chart.type=='vega' %}
+            <vega-chart data-source='ds-{{chart.query}}' id='vega-chart-{{id}}' charttitle="{{chart.title}}"{%if chart.order%} order="{{chart.order}}"{%endif%}>
+              <script type='template' id='vega-spec-{{id}}'>{{chart.display|tojson}}</script>
+            </vega-chart>
+          {% endif %}
+          {% if chart.html %}
+            <html-chart charttitle='{{chart.title}}'>{{chart.html}}</html-chart>
+          {% endif %}
+        {% endfor %}
+      </tab-item>
     {% endfor %}
   </nav-tabs>
 </dashboard-app>
