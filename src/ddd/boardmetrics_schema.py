@@ -3,7 +3,7 @@ import sqlite3
 from ddd.phobjects import sqlite_connect
 from pathlib import Path
 from typing import Callable, Optional, Union
-from ddd import console
+from ddd import console, FakeConsole
 from typer.params import Option
 from typer.models import Context
 from ddd.phab import Conduit
@@ -16,7 +16,7 @@ class Config:
     phab: Conduit = field(init=True)
     db_path: Optional[Path] = field(init=True)
     db: Database = field(init=False, repr=False)
-    console = field(init=False, repr=False)
+    console:FakeConsole = field(init=False, repr=False)
 
     def __post_init__(self):
         self.console = console
